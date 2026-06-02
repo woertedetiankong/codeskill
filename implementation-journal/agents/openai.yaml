@@ -1,0 +1,4 @@
+interface:
+  display_name: "Implementation Journal"
+  short_description: "Maintain process logs and handoff docs during implementation."
+  default_prompt: "Use $implementation-journal while implementing this task so decisions are logged and a handoff document is produced."
