@@ -1,0 +1,7 @@
+interface:
+  display_name: "Transparent Workshop D Style"
+  short_description: "D-style Chinese article illustrations"
+  brand_color: "#2563EB"
+  default_prompt: "Use $transparent-workshop-illustrations to create D-style illustrations."
+policy:
+  allow_implicit_invocation: true
