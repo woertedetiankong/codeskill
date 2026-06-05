@@ -1,0 +1,4 @@
+interface:
+  display_name: "Goal Brief Builder"
+  short_description: "Interview users and draft /goal-ready briefs"
+  default_prompt: "Use $goal-brief-builder to interview me in Plan mode and produce a /goal-ready development brief."

@@ -8,6 +8,7 @@ Personal Codex skills.
 - `improve-codebase-architecture` - Architecture review workflow for finding deepening opportunities in a codebase.
 - `transparent-workshop-illustrations` - D-style Chinese technical article body illustrations.
 - `implementation-journal` - Process logs and handoff docs for non-trivial implementation work.
+- `goal-brief-builder` - Plan-mode interview workflow for drafting `/goal`-ready development briefs.
 
 ## Install
 
@@ -18,4 +19,5 @@ cp -R tdd ~/.codex/skills/
 cp -R improve-codebase-architecture ~/.codex/skills/
 cp -R transparent-workshop-illustrations ~/.codex/skills/
 cp -R implementation-journal ~/.codex/skills/
+cp -R goal-brief-builder ~/.codex/skills/
 ```
