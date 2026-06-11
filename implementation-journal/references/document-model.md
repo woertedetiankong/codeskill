@@ -7,9 +7,11 @@ Use this reference when deciding where implementation knowledge should live.
 | Layer | Audience | Purpose | Edit style |
 |---|---|---|---|
 | Long-term plan | User, product owner, future agents | Intent, milestones, status, links to evidence | Living status document |
+| Task index | Future implementers and agents | Discover task dossiers, latest handoffs, and module relationships | Lightweight registry |
 | Task dossier | Current and next implementer | Work contract and milestone memory | Task-scoped |
-| Implementation log | Future implementer debugging decisions | Decisions, constraints, failed paths, validation discoveries | Append-only |
-| Handoff | Next human or AI | Current state, what changed, how to continue | Rewrite to current truth |
+| Implementation log | Future implementer debugging decisions | Decisions, constraints, failed paths, validation discoveries | Conditional append-only |
+| Handoff | Next human or AI | Current state, what changed, how to continue, how to verify restart reality | Rewrite to current truth |
+| New-session entry | Next AI session | Pointer to the latest handoff, known errata, red lines, first verify command | Lightweight current pointer |
 | Project wiki | Team and future agents | Compiled durable knowledge and cross-links | Rewrite and refactor |
 | README/docs | New users/operators/integrators | How to run, use, integrate, and operate | Rewrite to current truth |
 | AGENTS/CLAUDE | Agents working in the repo | Project conventions and non-obvious guardrails | Concise current guidance |
@@ -22,6 +24,8 @@ Use existing repo conventions first. If none exist:
 docs/tasks/<YYYY-MM-DD>-<slug>/task-brief.md
 docs/tasks/<YYYY-MM-DD>-<slug>/implementation-log.md
 docs/tasks/<YYYY-MM-DD>-<slug>/handoff.md
+docs/tasks/INDEX.md
+tasks/todo.md
 docs/wiki/index.md
 docs/wiki/log.md
 docs/wiki/<topic>.md
@@ -47,11 +51,24 @@ If a milestone is too large, create a sub-slice that has a coherent deliverable 
 
 ## Task Dossier
 
+Create or update `docs/tasks/INDEX.md` when it improves discovery: multi-module work, several plan-linked dossiers, or at least three task dossiers. Keep it as a registry, not a second plan. Each row should point to the task dossier and latest handoff, name the module/surface, record status, and list upstream/downstream task references using stable relative links.
+
 `task-brief.md` is the contract. It should include the selected slice, success criteria, scope, constraints, source plan link, and expected docs/wiki touchpoints.
 
-`implementation-log.md` is working memory. Append dated entries when meaningful decisions happen. Do not rewrite history after a plan changes; add a new entry explaining the change.
+`implementation-log.md` is a conditional decision log. Create it only when there is implementation memory worth preserving: ambiguous behavior chosen, hidden constraints, rejected paths, tradeoffs, validation surprises, risks, or cross-session reasoning. Do not create it as an empty ritual file or command transcript. Append dated entries when meaningful decisions happen. Do not rewrite history after a plan changes; add a new entry explaining the change.
 
-`handoff.md` is the takeover document. Rewrite it near completion so it is short, accurate, and useful without reading the whole log.
+If no log trigger occurs, record `Implementation log: Not required - no meaningful decision trail occurred` in the handoff.
+
+`handoff.md` is the takeover document. Rewrite it near completion so it is short, accurate, and useful without reading the whole log. Include restart verify commands, expected outputs, mismatch meanings, cross-module references, closed decisions, red lines, and gotchas when they affect continuity.
+
+Use stable relative links when one module references another module's dossier, handoff, docs, or wiki topic. Prefer a predictable shape:
+
+```markdown
+- Depends on: [auth device flow](../2026-06-10-auth-device-flow/handoff.md) - token contract
+- Referenced by: [billing import](../2026-06-12-billing-import/handoff.md) - user identity mapping
+```
+
+The new-session entry is the first landing point for a new chat. Use the repo's established session/todo file, or `tasks/todo.md` by default. It should point to the latest handoff, note any known errata, and provide the first verify command. Keep state details in the handoff so the entry does not become a competing authority.
 
 ## Project Wiki
 

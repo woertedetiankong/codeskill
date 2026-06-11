@@ -22,6 +22,7 @@ If code and product intent conflict, document the mismatch as a risk or open que
 | New data model/schema | Architecture docs, wiki data-model page, migration notes |
 | New architecture decision | Decision record or wiki decision page, task handoff |
 | Changed user/operator workflow | README, runbook, workflow docs, wiki topic |
+| Cross-module contract or shared implementation rule | Wiki topic or architecture docs immediately when confirmed; task handoff cross-module references; task index when present |
 | Deprecated behavior | Remove or rewrite current-facing docs; preserve rationale in log/decision page if useful |
 | Validation discovery | Handoff validation section; wiki only if durable |
 | Follow-up work | Long-term plan backlog or handoff follow-ups, not scattered TODO prose |
@@ -33,6 +34,7 @@ If code and product intent conflict, document the mismatch as a risk or open que
 - Preserve important history in append-only logs or decision records, not in README or topic pages.
 - Use absolute dates. Do not write "today", "yesterday", "recently", "now", or "last week".
 - Keep audience boundaries clean: README/docs teach users, AGENTS/CLAUDE guide agents, wiki pages compile durable knowledge, logs explain how decisions happened.
+- Write confirmed cross-module durable knowledge as soon as it can affect another active or upcoming module. Do not wait for final cleanup when the fact changes shared contracts, architecture rules, integration behavior, environment assumptions, or data model semantics. Use a clearly named durable-knowledge follow-up only when the fact needs user confirmation, would expand scope, or cannot be safely edited now.
 - Do not update global agent memory for ordinary project details.
 
 ## Cleanup Checklist
@@ -41,6 +43,8 @@ Before declaring the journal complete:
 
 - Inventory likely affected docs and classify each as `rewrite`, `merge`, `delete`, `create`, or `keep`.
 - Search the touched docs for the old name, old command, old route, old environment variable, or old behavior.
+- For cross-module changes, search task dossiers, handoffs, docs, and wiki pages for stable links, module names, API names, command names, routes, schema/table names, and contract phrases that may reference the changed surface.
+- Update `docs/tasks/INDEX.md` when module status, latest handoff, dependencies, or dependents changed.
 - Check README and docs instructions against package scripts, config files, and actual paths.
 - Check AGENTS/CLAUDE claims against the repo.
 - Update wiki index links when creating, renaming, or deleting wiki pages.

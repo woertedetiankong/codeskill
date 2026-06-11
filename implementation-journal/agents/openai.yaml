@@ -1,4 +1,4 @@
 interface:
   display_name: "Implementation Journal"
-  short_description: "Plan-linked journals and docs/wiki handoffs"
-  default_prompt: "Use $implementation-journal for this milestone so the plan, task dossier, implementation log, handoff, and relevant docs or wiki stay aligned."
+  short_description: "Plan-linked journals, restart handoffs, and docs/wiki sync"
+  default_prompt: "Use $implementation-journal for this milestone so the plan, task dossier, implementation log, restart handoff, new-session entry, and relevant docs or wiki stay aligned."
