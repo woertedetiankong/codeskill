@@ -2,29 +2,38 @@
 
 Use this reference when creating or refreshing a cross-session handoff. The goal is restart continuity: a new human or AI session should know what is true, what to verify first, what to do next, and what not to touch.
 
-## Three-Layer Model
+## Two-Layer Model
 
 1. `handoff.md`: the authority for the current milestone state.
-2. New-session entry: a short top section in `tasks/todo.md` or the repo's established session entry file. It points to the latest handoff and records errata if a handoff section became stale.
-3. Restart opener: a pasteable first message for the next AI session. It compresses the file pointers, immediate next steps, verify command, and red lines.
+2. New-session entry: a short pasteable restart opener at `docs/tasks/NEXT-SESSION.md` or the repo's established session entry file. It points to the latest handoff, records errata when a handoff section became stale, and compresses the immediate next steps, red lines, and first verify command into a first message for the next session.
 
-Keep these layers distinct. The entry is a pointer and errata layer, not a second handoff. The opener is a launch instruction, not a status document.
+Keep the layers distinct. The entry is a launch instruction and errata layer, not a second handoff; state details live in the handoff.
 
-## Minimum Handoff Fields
+## Read Budget
 
-Every restart-ready handoff should include:
+The handoff competes for two scarce budgets: the next session's context window and the human's skim time. Target one screen — about 60 lines. When a handoff grows past that, move narrative and history into `implementation-log.md` and link it; the handoff keeps conclusions and pointers.
 
+## Handoff Fields
+
+Always present, even when the content is one line:
+
+- Summary: what changed and why.
 - Current state: one sentence saying where the milestone stands.
 - Git and persistent state: branch, key commit hashes, PR state, unpushed work, generated artifacts, migrations, or external state that matters.
-- Environment state: special local/runtime state that changes the safe next action, such as the current checkout driving production hooks, a required service already running, or a temporary data snapshot in use.
-- Session results with evidence: what changed and the proof, such as commits, test results, manual checks, review findings, or produced artifacts.
-- Cross-module references: stable links to upstream dependencies and downstream dependents when the work touches module boundaries or shared contracts.
+- Validation: what changed and the proof, such as commits, test results, manual checks, review findings, or produced artifacts. Required when status is Complete; a Provisional handoff may omit it only when no checks ran yet.
 - Next backlog by ROI: the next actions in priority order, with short reasons.
-- Closed decisions: rejected options and one-line reasons. Label them so future agents do not reopen them accidentally.
 - Restart verify: commands or checks that can be run first, with expected output and what a mismatch means.
-- Environment constraints and gotchas: non-obvious services, env vars, data safety rules, local state, or operational hazards.
-- Red lines: enforceable instructions such as "do not push without user approval" or "do not run destructive migration commands automatically."
-- Docs/wiki sync: what durable knowledge was updated, skipped, or still needs reconciliation.
+- Implementation log declaration: a pointer to `implementation-log.md`, or `Not required - <reason>` when no log trigger occurred. Absence is ambiguous, so this line is never omitted.
+
+Present only when they carry real content — omit the section instead of writing "None" or "None known"; the validator flags placeholder-only sections:
+
+- Environment state: special local/runtime state that changes the safe next action, such as the current checkout driving production hooks, a required service already running, or a temporary data snapshot in use.
+- Key decisions and closed decisions: rejected options with one-line reasons, labeled so future agents do not reopen them accidentally.
+- Changed surfaces: paths or subsystems and the role of each change.
+- Cross-module references: stable links to upstream dependencies and downstream dependents. Not optional when the work touches module boundaries or shared contracts.
+- Red lines and gotchas: enforceable instructions ("do not push without user approval") and non-obvious services, env vars, data safety rules, or operational hazards.
+- Docs/wiki sync: what durable knowledge was updated, skipped, or still needs reconciliation. When omitted, the final response must still state the reconciliation outcome.
+- Known risks and follow-ups.
 
 ## Restart Verify
 
@@ -41,36 +50,24 @@ Do not write "verify manually" when a command would be more precise. If validati
 
 ## New-Session Entry
 
-Place this at the top of the repo's existing todo/session file, or use `tasks/todo.md` if no convention exists:
+Place this at `docs/tasks/NEXT-SESSION.md`, or in the repo's existing todo/session file if one exists:
 
 ```markdown
-## New Session Entry
+# Next Session
 
-- Read first: `<handoff path>`.
-- Errata: <known stale section in handoff, or "None known">.
-- Current board: <3-6 bullets summarizing state and next action>.
-- Environment: <special environment state or "None known">.
-- Red lines: <enforceable constraints>.
-- First verify: `<command>`; expected <output>; mismatch means <diagnosis>.
-```
-
-When a new handoff supersedes the old one, update this entry. Keep older entries only if the repo already preserves historical entries; otherwise link history from the handoff chain.
-
-## Restart Opener
-
-Add a short pasteable opener to the handoff when the work may continue in a new chat:
-
-```text
-Project <path> (<name>). Read <handoff path> and <new-session entry path> first.
+Project <path> (<name>). Read `<handoff path>` first.
 Previous session: <one-sentence result with evidence>.
+Errata: <known stale section in the handoff, or "None known">.
 Current state: <one-sentence board>.
 Environment: <special environment state or "None known">.
 Now do: 1. <next step> 2. <next step>.
 Red lines: <enforceable instruction>; <enforceable instruction>.
-First verify: <command> (expected <output>; mismatch means <diagnosis>).
+First verify: `<command>` (expected <output>; mismatch means <diagnosis>).
 ```
 
-Write red lines as commands the agent can obey. "Be careful" is not enforceable; "do not push until the user explicitly says push" is enforceable.
+The entry doubles as the restart opener: it must work when pasted as the first message of a new session. Write red lines as commands the agent can obey. "Be careful" is not enforceable; "do not push until the user explicitly says push" is enforceable.
+
+When a new handoff supersedes the old one, rewrite this entry. Keep older entries only if the repo already preserves historical entries; otherwise link history from the handoff chain.
 
 ## Write-Back Discipline
 

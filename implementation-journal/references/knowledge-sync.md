@@ -34,7 +34,7 @@ If code and product intent conflict, document the mismatch as a risk or open que
 - Preserve important history in append-only logs or decision records, not in README or topic pages.
 - Use absolute dates. Do not write "today", "yesterday", "recently", "now", or "last week".
 - Keep audience boundaries clean: README/docs teach users, AGENTS/CLAUDE guide agents, wiki pages compile durable knowledge, logs explain how decisions happened.
-- Write confirmed cross-module durable knowledge as soon as it can affect another active or upcoming module. Do not wait for final cleanup when the fact changes shared contracts, architecture rules, integration behavior, environment assumptions, or data model semantics. Use a clearly named durable-knowledge follow-up only when the fact needs user confirmation, would expand scope, or cannot be safely edited now.
+- Write confirmed cross-module durable knowledge as soon as it can affect another active or upcoming module, per the immediate-update rule in SKILL.md; do not wait for final cleanup.
 - Do not update global agent memory for ordinary project details.
 
 ## Cleanup Checklist

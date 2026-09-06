@@ -63,10 +63,12 @@ Use this template only after a log trigger occurs. Do not create an empty implem
 
 ### <YYYY-MM-DD>
 
-- <Decision, constraint, failed path, tradeoff, validation discovery, risk, or follow-up.>
+- <Decision, constraint, failed path, tradeoff, validation discovery, risk, or follow-up.> Commit: <hash or PR once the decision lands in code; omit until then>.
 ```
 
 ## Handoff
+
+Core skeleton — these sections always appear (field rules and the read budget live in references/handoff-discipline.md):
 
 ````markdown
 ---
@@ -91,27 +93,6 @@ supersedes: <previous handoff path, or omit if none>
 - Branch: <branch and relevant commit hashes, or "Unknown/not applicable">
 - Persistent state: <PRs, migrations, generated artifacts, external state, or "None known">
 
-## Environment State
-
-<Special local/runtime state that changes the safe next action, or "None known".>
-
-## Key Decisions
-
-- <Decision and rationale.>
-
-## Closed Decisions / Do Not Reopen
-
-- <Rejected option and one-line reason, or "None">
-
-## Changed Surfaces
-
-- `<path or subsystem>`: <role of the change>
-
-## Cross-Module References
-
-- Depends on: [<module or task>](<relative path to handoff or docs>) - <contract or reason, or "None">
-- Referenced by: [<module or task>](<relative path to handoff or docs>) - <contract or reason, or "Unknown/not applicable">
-
 ## Validation
 
 - `<command/check>`: <result>
@@ -125,62 +106,77 @@ supersedes: <previous handoff path, or omit if none>
 
 ## Next Steps
 
-1. <Next action by ROI and reason, or "None">
-
-## Red Lines And Gotchas
-
-- Red line: <enforceable instruction, or "None">
-- Gotcha: <environment/data/process hazard, or "None known">
-
-## Docs And Wiki
-
-- Rewritten: <docs/wiki pages or "None">
-- Merged: <docs/wiki pages or "None">
-- Deleted: <docs/wiki pages or "None">
-- Created: <docs/wiki pages or "None">
-- Not required: <reason, if no docs/wiki update was needed>
+1. <Next action by ROI and reason, or "None - milestone closed">
 
 ## Implementation Log
 
 - <`implementation-log.md` path and summary, or "Not required - no meaningful decision trail occurred">
+````
+
+Conditional sections — include only those with real content, in this order between `Git And Persistent State` and `Validation`; never write one whose only content would be "None" or "None known":
+
+````markdown
+## Environment State
+
+<Special local/runtime state that changes the safe next action.>
+
+## Key Decisions
+
+- <Decision and rationale.>
+
+## Closed Decisions / Do Not Reopen
+
+- <Rejected option and one-line reason.>
+
+## Changed Surfaces
+
+- `<path or subsystem>`: <role of the change>
+
+## Cross-Module References
+
+- Depends on: [<module or task>](<relative path to handoff or docs>) - <contract or reason>
+- Referenced by: [<module or task>](<relative path to handoff or docs>) - <contract or reason>
+
+## Red Lines And Gotchas
+
+- Red line: <enforceable instruction>
+- Gotcha: <environment/data/process hazard>
+
+## Docs And Wiki
+
+- Rewritten: <docs/wiki pages>
+- Deleted: <docs/wiki pages>
+- Created: <docs/wiki pages>
 
 ## Known Risks
 
-- <Risk or "None known">
+- <Risk>
 
 ## Follow-ups
 
-- <Follow-up or "None">
-
-## Restart Opener
-
-```text
-Project <path> (<name>). Read <handoff path> and <new-session entry path> first.
-Previous session: <one-sentence result with evidence>.
-Current state: <one-sentence board>.
-Environment: <special environment state or "None known">.
-Now do: 1. <next step> 2. <next step>.
-Red lines: <enforceable instruction>.
-First verify: <command> (expected <output>; mismatch means <diagnosis>).
-```
+- <Follow-up>
 ````
 
 ## New-Session Entry
 
-```markdown
-## New Session Entry
+Written to `docs/tasks/NEXT-SESSION.md` or the repo's existing session/todo file. It doubles as the restart opener: it must work when pasted as the first message of a new session.
 
-- Read first: `<handoff path>`.
-- Errata: <known stale section in handoff, or "None known">.
-- Current board: <3-6 bullets with current state and next action>.
-- Environment: <special environment state or "None known">.
-- Red lines: <enforceable constraints, or "None">.
-- First verify: `<command>`; expected <output>; mismatch means <diagnosis>.
+```markdown
+# Next Session
+
+Project <path> (<name>). Read `<handoff path>` first.
+Previous session: <one-sentence result with evidence>.
+Errata: <known stale section in the handoff, or "None known">.
+Current state: <one-sentence board>.
+Environment: <special environment state or "None known">.
+Now do: 1. <next step> 2. <next step>.
+Red lines: <enforceable instruction>; <enforceable instruction>.
+First verify: `<command>` (expected <output>; mismatch means <diagnosis>).
 ```
 
 ## Task Index
 
-Use this only when the project has multi-module work, several plan-linked dossiers, or at least three task dossiers.
+Use this only when the task-index conditions in SKILL.md are met.
 
 ```markdown
 # Task Index
@@ -206,10 +202,31 @@ Use this only when the project has multi-module work, several plan-linked dossie
 - Notes: <important synthesis, contradiction, or cleanup>
 ```
 
-## Long-Term Plan Status Row
+## Plan Status Dashboard
+
+Lives inside the in-repo long-term plan; ownership rules in references/document-model.md.
 
 ```markdown
-| <Milestone> | <Status> | <YYYY-MM-DD> | <Evidence link> | <short note> |
+## Status Dashboard
+
+> Updated: <YYYY-MM-DD>
+
+| Milestone | Status | Updated | Evidence | Note |
+|---|---|---|---|---|
+| <milestone> | In progress | <YYYY-MM-DD> | [dossier](<task folder>/task-brief.md) | <short note> |
+| <milestone> | Done | <YYYY-MM-DD> | [handoff](<task folder>/handoff.md) | <short note> |
+
+### Needs your judgment
+
+- <question that blocks or steers direction> - [context](<dossier or handoff path>) - <consequence if it stays unanswered>
+
+### Recently closed decisions
+
+- <YYYY-MM-DD> <decision> - <one-line rationale> ([detail](<log or handoff path>))
+
+### Top risks
+
+- <risk the owner can act on> - [detail](<path>)
 ```
 
-Use `In progress` with a task dossier link at start, `Done` with a handoff link at completion, and `Abandoned` or `Replaced` with a log/decision link when the milestone changes direction.
+Statuses: `In progress` with a dossier link at start, `Done` with a handoff link at completion, `Blocked` with the blocking question in Needs your judgment, and `Abandoned` or `Replaced` with a log/decision link explaining why. Omit the three subsections when empty, same as conditional handoff sections.
