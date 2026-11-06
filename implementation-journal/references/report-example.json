@@ -1,0 +1,52 @@
+{
+  "version": 1,
+  "project": "Storefront app",
+  "milestone": "Payment step",
+  "finished": "2026-11-07",
+  "outcome": "done",
+  "headline": "Shoppers can now pay without leaving the page.",
+  "goal": "Shoppers pay by card or Apple Pay on the checkout page, with no redirect.",
+  "doneWhen": [
+    { "text": "Card payment works", "met": true },
+    { "text": "Apple Pay button shows", "met": true },
+    { "text": "Guests can save their card", "met": true }
+  ],
+  "changes": [
+    { "what": "Paying", "before": "Sent to another site", "after": "Card or Apple Pay, same page" },
+    { "what": "Apple Pay", "before": "Not offered", "after": "One tap with Face ID" },
+    { "what": "Coming back", "before": "Type the card again", "after": "Saved card, if they chose" }
+  ],
+  "decisions": [
+    { "date": "2026-11-02", "picked": "Payment company's secure box", "over": "Our own card fields", "why": "We never touch card numbers, so there is nothing sensitive to leak.", "by": "claude" },
+    { "date": "2026-11-04", "picked": "Ask before building saved cards", "over": "Guess and build it", "why": "Who may keep a guest's card is a product choice.", "by": "claude" },
+    { "date": "2026-11-05", "picked": "Guests can tick “Save my card”", "over": "Always ask for the card", "why": "Returning guests skip typing, and nobody is saved without asking.", "by": "you" }
+  ],
+  "story": [
+    { "date": "2026-11-01", "kind": "started", "title": "Started the payment step", "summary": "Goal: pay without leaving the page.", "example": "Maya taps Apple Pay, confirms with Face ID, and sees “Order placed.” No new tab, no redirect.", "why": "Every later choice was checked against this picture of done." },
+    { "date": "2026-11-02", "kind": "decision", "title": "Card numbers go through the payment company's secure box", "summary": "Our app never sees the card number.", "example": "Maya types 4242 4242… The digits go straight to the payment company. We only get back a one-time code to charge her.", "why": "Nothing sensitive to leak, and no months-long security review." },
+    { "date": "2026-11-03", "kind": "found", "title": "Apple Pay needs our site verified first", "summary": "Apple checks our site before the button appears.", "example": "On the test site the Apple Pay button was just missing, with no error. Adding one file from Apple made it appear.", "why": "The live site needs the same file before launch." },
+    { "date": "2026-11-04", "kind": "changed-course", "title": "Stopped building saved cards to ask first", "summary": "Started it, then pulled back.", "example": "Saving a guest's card means asking permission and keeping it for months. That is a call for the product owner.", "why": "Better to ask than to guess and redo it." },
+    { "date": "2026-11-05", "kind": "decision", "title": "You chose: guests may save their card", "summary": "A “Save my card” box, unticked by default.", "example": "Maya ticks “Save my card” on her first order. Next month her card is already filled in.", "why": "This settled the last open part of the step." },
+    { "date": "2026-11-07", "kind": "finished", "title": "Payment step finished", "summary": "All three goals met and tested on the test site.", "example": "A $1 test order went through by card, by Apple Pay, and with a saved card.", "why": "Order emails can start next." }
+  ],
+  "dropped": [
+    { "what": "Pay in installments", "date": "2026-11-03", "instead": "Its own milestone later", "why": "It needs a deal with a lending company first." }
+  ],
+  "risks": [
+    { "risk": "Apple Pay won't show on the live site yet.", "action": "Someone with access to the live site adds one file from Apple.", "when": "Before launch" }
+  ],
+  "touched": ["Checkout page", "Payments"],
+  "docsUpdated": ["README", "Payment guide"],
+  "followUps": ["Order emails is the next step in the plan."],
+  "plan": {
+    "name": "Checkout redesign",
+    "steps": [
+      { "name": "Tidy the cart", "state": "done", "date": "2026-10-20" },
+      { "name": "Gift wrapping", "state": "dropped", "date": "2026-10-24", "note": "Gift notes instead" },
+      { "name": "Address form", "state": "done", "date": "2026-10-28" },
+      { "name": "Shipping costs", "state": "done", "date": "2026-11-01" },
+      { "name": "Payment step", "state": "done", "date": "2026-11-07", "thisMilestone": true },
+      { "name": "Order emails", "state": "next" }
+    ]
+  }
+}

@@ -10,7 +10,8 @@
 #
 # stdout of a SessionStart hook is added to Claude's context.
 # Exits 0 silently when the project has no journal — safe to install globally.
-# Not installed automatically; see hooks/README.md.
+# Registered automatically by the Claude Code plugin (hooks/hooks.json);
+# for a plain skill install, see hooks/README.md.
 set -uo pipefail
 
 payload=$(cat)

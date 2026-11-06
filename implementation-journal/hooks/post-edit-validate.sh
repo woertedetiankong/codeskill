@@ -8,7 +8,8 @@
 # so drafting is not nagged mid-flow.
 #
 # Repos that keep dossiers elsewhere: adjust the case pattern below.
-# Not installed automatically; see hooks/README.md.
+# Registered automatically by the Claude Code plugin (hooks/hooks.json);
+# for a plain skill install, see hooks/README.md.
 set -uo pipefail
 
 payload=$(cat)
@@ -20,7 +21,7 @@ print(d.get("tool_input", {}).get("file_path", ""))
 ' 2>/dev/null || true)
 
 case "$file" in
-  */docs/tasks/*.md) [ -f "$file" ] || exit 0 ;;
+  */docs/tasks/*.md|*/docs/tasks/*/report.json) [ -f "$file" ] || exit 0 ;;
   *) exit 0 ;;
 esac
 

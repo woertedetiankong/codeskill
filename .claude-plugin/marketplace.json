@@ -1,0 +1,14 @@
+{
+  "name": "codeskill",
+  "owner": {
+    "name": "woertedetiankong"
+  },
+  "description": "Skills for AI-assisted development in Claude Code and Codex.",
+  "plugins": [
+    {
+      "name": "implementation-journal",
+      "source": "./implementation-journal",
+      "description": "Plan-linked task dossiers, restart handoffs, docs and wiki sync, and a readable web report for every finished milestone."
+    }
+  ]
+}

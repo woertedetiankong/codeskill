@@ -12,7 +12,12 @@ by a command instead of model diligence:
   (a missing log must be declared "Not required" in the handoff).
 - NEXT-SESSION.md: handoff pointer that resolves, Errata / Now do /
   Red lines / First verify fields.
-- All files: relative-date phrases ("today", "last week", ...), broken
+- report.json: the fields, choices, dates, list sizes, and word limits in
+  references/report.md; no agent-facing text (hashes, paths, URLs, code
+  names, Markdown); outcome agrees with doneWhen; one thisMilestone step.
+  WARN when the handoff beside it is not Complete or report.html is
+  missing or older than the JSON.
+- Markdown files: relative-date phrases ("today", "last week", ...), broken
   relative links, leftover template placeholders. Code fences are skipped.
 
 Usage:
@@ -25,6 +30,7 @@ conventions can pass explicit paths; unknown layouts degrade to warnings.
 """
 
 import argparse
+import json
 import re
 import sys
 from pathlib import Path
@@ -54,6 +60,40 @@ NONEISH_RE = re.compile(
     r"^(?:[\w /()-]+:)?\s*(?:none(?: known| yet)?|unknown(?:/not applicable)?"
     r"|not applicable|n/a)\s*\.?\s*$",
     re.IGNORECASE,
+)
+
+# references/report.md: the plain-language report of a closed milestone.
+REPORT_NAME = "report.json"
+REPORT_TEXT = {"project": 4, "milestone": 6, "headline": 12, "goal": 20}
+OUTCOMES = ("done", "partial", "dropped")
+STORY_KINDS = ("started", "decision", "found", "changed-course", "paused", "finished")
+STEP_STATES = ("done", "current", "next", "later", "dropped")
+# field: (min items, max items, {key: spec}). A spec is a word limit for
+# required text, "?N" for text-or-null, "date", "bool", or a tuple of choices.
+REPORT_LISTS = {
+    "doneWhen": (1, 5, {"text": 8, "met": "bool"}),
+    "changes": (0, 5, {"what": 5, "before": 6, "after": 6}),
+    "decisions": (0, 6, {"date": "date", "picked": 8, "over": 8, "why": 15,
+                         "by": ("claude", "you")}),
+    "story": (1, 10, {"date": "date", "kind": STORY_KINDS, "title": 10,
+                      "summary": 15, "example": 35, "why": 20}),
+    "dropped": (0, 5, {"what": 6, "date": "date", "instead": "?8", "why": 15}),
+    "risks": (0, 3, {"risk": 12, "action": 15, "when": 4}),
+}
+# field: (max items, words per item)
+REPORT_TEXT_LISTS = {"touched": (6, 4), "docsUpdated": (6, 4), "followUps": (3, 12)}
+REPORT_KEYS = {"version", "finished", "outcome", "plan",
+               *REPORT_TEXT, *REPORT_LISTS, *REPORT_TEXT_LISTS}
+# Agent-facing detail that belongs in the handoff, never in the report.
+REPORT_BANNED = (
+    (re.compile(r"\b(?=[0-9a-f]*\d)(?=[0-9a-f]*[a-f])[0-9a-f]{7,40}\b"), "a commit hash"),
+    (re.compile(r"(?:\bPR\s*)?#\d+\b"), "a PR or issue number"),
+    (re.compile(r"https?://|\bwww\."), "a URL"),
+    (re.compile(r"`|\*\*|\]\(|^#{1,6}\s"), "Markdown syntax"),
+    (re.compile(r"(?:^|\s)\.{0,2}/\w|\b\w[\w.-]*/[\w.-]+/"
+                r"|\b[\w-]+\.(?:py|jsx?|tsx?|md|json|html|css|scss|go|rs|java|kt|rb|php|sh|ya?ml|toml|sql|lock)\b"),
+     "a file path"),
+    (re.compile(r"\b[a-z][a-z0-9]*_[a-z0-9_]+\b|\b\w+\(\)"), "a code identifier"),
 )
 
 
@@ -228,8 +268,155 @@ def check_next_session(path, report):
             report.warn(path, 1, f'missing "{field}" field')
 
 
+def json_strings(value):
+    """Every string inside a parsed JSON value."""
+    if isinstance(value, str):
+        yield value
+    elif isinstance(value, dict):
+        for item in value.values():
+            yield from json_strings(item)
+    elif isinstance(value, list):
+        for item in value:
+            yield from json_strings(item)
+
+
+def check_report(path, report):
+    text = path.read_text(encoding="utf-8", errors="replace")
+    try:
+        data = json.loads(text)
+    except json.JSONDecodeError as exc:
+        report.error(path, exc.lineno, f"not valid JSON: {exc.msg}")
+        return
+    if not isinstance(data, dict):
+        report.error(path, 1, "report must be a JSON object")
+        return
+
+    def line_of(value):
+        if isinstance(value, str):
+            # Prefer a match in value position, so a value that is also a key
+            # (e.g. "milestone") points at the right line.
+            dumped = (json.dumps(value, ensure_ascii=False), json.dumps(value))
+            for needle in (*(": " + d for d in dumped), *dumped):
+                index = text.find(needle)
+                if index >= 0:
+                    return text.count("\n", 0, index) + 1
+        return 1
+
+    def check_value(name, value, spec):
+        if isinstance(spec, str) and spec.startswith("?"):
+            if value is None:
+                return
+            spec = int(spec[1:])
+        line = line_of(value)
+        if spec == "date":
+            if not (isinstance(value, str) and re.fullmatch(r"\d{4}-\d{2}-\d{2}", value)):
+                report.error(path, line, f"{name} must be a YYYY-MM-DD date")
+        elif spec == "bool":
+            if not isinstance(value, bool):
+                report.error(path, line, f"{name} must be true or false")
+        elif isinstance(spec, tuple):
+            if value not in spec:
+                report.error(path, line, f"{name} must be one of: {', '.join(spec)}")
+        elif not (isinstance(value, str) and value.strip()):
+            report.error(path, line, f"{name} must be non-empty text")
+        elif len(value.split()) > spec:
+            report.error(path, line, f"{name} is {len(value.split())} words (limit {spec}) "
+                                     "— keep the detail in the log")
+
+    if data.get("version") != 1:
+        report.error(path, 1, "version must be 1")
+    for key in sorted(set(data) - REPORT_KEYS):
+        report.warn(path, 1, f'unknown field "{key}" — references/report.md lists the fields')
+    singles = [*REPORT_TEXT.items(), ("finished", "date"), ("outcome", OUTCOMES)]
+    for key, spec in singles:
+        if key not in data:
+            report.error(path, 1, f'missing field "{key}"')
+        else:
+            check_value(key, data[key], spec)
+
+    for key, (low, high, fields) in REPORT_LISTS.items():
+        items = data.get(key)
+        if not isinstance(items, list):
+            report.error(path, 1, f'"{key}" must be a list (write [] when empty)')
+            continue
+        if not low <= len(items) <= high:
+            report.error(path, 1, f'"{key}" has {len(items)} items (allowed {low}-{high})')
+        for i, item in enumerate(items):
+            if not isinstance(item, dict):
+                report.error(path, 1, f"{key}[{i}] must be an object")
+                continue
+            for field, spec in fields.items():
+                if field not in item:
+                    report.error(path, 1, f'{key}[{i}] is missing "{field}"')
+                else:
+                    check_value(f"{key}[{i}].{field}", item[field], spec)
+
+    for key, (high, limit) in REPORT_TEXT_LISTS.items():
+        items = data.get(key)
+        if not isinstance(items, list):
+            report.error(path, 1, f'"{key}" must be a list (write [] when empty)')
+            continue
+        if len(items) > high:
+            report.error(path, 1, f'"{key}" has {len(items)} items (allowed 0-{high})')
+        for i, item in enumerate(items):
+            check_value(f"{key}[{i}]", item, limit)
+
+    if "plan" in data:
+        plan = data["plan"]
+        steps = plan.get("steps") if isinstance(plan, dict) else None
+        if not isinstance(steps, list) or not steps:
+            report.error(path, 1, "plan must be {name, steps} with at least one step, or be left out")
+        else:
+            check_value("plan.name", plan.get("name"), 6)
+            marked = 0
+            for i, step in enumerate(steps):
+                if not isinstance(step, dict):
+                    report.error(path, 1, f"plan.steps[{i}] must be an object")
+                    continue
+                check_value(f"plan.steps[{i}].name", step.get("name"), 4)
+                check_value(f"plan.steps[{i}].state", step.get("state"), STEP_STATES)
+                if "date" in step:
+                    check_value(f"plan.steps[{i}].date", step["date"], "date")
+                if "note" in step:
+                    check_value(f"plan.steps[{i}].note", step["note"], 8)
+                if step.get("thisMilestone") is True:
+                    marked += 1
+            if marked != 1:
+                report.error(path, 1, f"plan.steps must mark exactly one thisMilestone (found {marked})")
+
+    for value in json_strings(data):
+        for pattern, what in REPORT_BANNED:
+            if pattern.search(value):
+                report.error(path, line_of(value),
+                             f'looks like {what}: "{value}" — agent-facing detail stays in the handoff')
+                break
+
+    done_when = data.get("doneWhen")
+    if isinstance(done_when, list):
+        met = [item.get("met") is True for item in done_when if isinstance(item, dict)]
+        if data.get("outcome") == "done" and not all(met):
+            report.error(path, 1, 'outcome is "done" but a doneWhen item is not met')
+        if data.get("outcome") == "partial" and met and all(met):
+            report.warn(path, 1, 'outcome is "partial" but every doneWhen item is met')
+
+    handoff = path.with_name("handoff.md")
+    if not handoff.exists():
+        report.warn(path, 1, "no handoff.md beside the report — a report summarizes a closed milestone")
+    else:
+        status = parse_frontmatter(read_lines(handoff))[0].get("status", "")
+        if not status.startswith("Complete"):
+            report.warn(path, 1, "handoff.md is not Complete — write the report when the milestone closes")
+    page = path.with_name("report.html")
+    if not page.exists():
+        report.warn(path, 1, "report.html not rendered — run scripts/render_report.py")
+    elif page.stat().st_mtime < path.stat().st_mtime:
+        report.warn(path, 1, "report.html is older than report.json — rerun scripts/render_report.py")
+
+
 def classify(path):
     name = path.name.lower()
+    if name == REPORT_NAME:
+        return check_report
     if "handoff" in name:
         return check_handoff
     if "brief" in name:
@@ -242,7 +429,7 @@ def classify(path):
 
 
 def collect(paths):
-    """Expand args into markdown files; default tasks dir when none given."""
+    """Expand args into journal files; default tasks dir when none given."""
     if not paths:
         default = Path("docs/tasks")
         if not default.is_dir():
@@ -255,6 +442,7 @@ def collect(paths):
         p = Path(raw)
         if p.is_dir():
             files.extend(sorted(p.rglob("*.md")))
+            files.extend(sorted(p.rglob(REPORT_NAME)))
         elif p.is_file():
             files.append(p)
         else:
@@ -274,7 +462,8 @@ def main():
     checked = 0
     for path in files:
         checker = classify(path)
-        check_common(path, read_lines(path), report)
+        if path.suffix.lower() == ".md":
+            check_common(path, read_lines(path), report)
         if checker:
             checker(path, report)
             checked += 1

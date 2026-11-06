@@ -1,0 +1,8 @@
+{
+  "name": "implementation-journal",
+  "description": "Plan-linked task dossiers, restart handoffs, docs and wiki sync, and a readable web report for every finished milestone.",
+  "author": { "name": "woertedetiankong" },
+  "homepage": "https://github.com/woertedetiankong/codeskill",
+  "repository": "https://github.com/woertedetiankong/codeskill",
+  "keywords": ["handoff", "journal", "milestone", "report", "codex"]
+}

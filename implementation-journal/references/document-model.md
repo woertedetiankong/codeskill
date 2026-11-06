@@ -11,6 +11,7 @@ Use this reference when deciding where implementation knowledge should live. Cre
 | Task dossier | Current and next implementer | Work contract and milestone memory | Task-scoped |
 | Implementation log | Future implementer debugging decisions | Decisions, constraints, failed paths, validation discoveries | Conditional append-only |
 | Handoff | Next human or AI | Current state, what changed, how to continue, how to verify restart reality | Rewrite to current truth |
+| Report | People reading after the milestone | Plain-language visual summary: what changed, choices made, what to keep in mind | Written when the milestone closes; rewritten if it reopens |
 | New-session entry | Next AI session | Pasteable restart opener: latest handoff pointer, errata, next steps, red lines, first verify | Lightweight current pointer |
 | Project wiki | Team and future agents | Compiled durable knowledge and cross-links | Rewrite and refactor |
 | README/docs | New users/operators/integrators | How to run, use, integrate, and operate | Rewrite to current truth |
@@ -24,7 +25,10 @@ Use existing repo conventions first. If none exist:
 docs/tasks/<YYYY-MM-DD>-<slug>/task-brief.md
 docs/tasks/<YYYY-MM-DD>-<slug>/implementation-log.md
 docs/tasks/<YYYY-MM-DD>-<slug>/handoff.md
+docs/tasks/<YYYY-MM-DD>-<slug>/report.json
+docs/tasks/<YYYY-MM-DD>-<slug>/report.html
 docs/tasks/INDEX.md
+docs/tasks/index.html
 docs/tasks/NEXT-SESSION.md
 docs/wiki/index.md
 docs/wiki/log.md
@@ -55,6 +59,8 @@ When a slice starts, mark it `In progress` with an absolute date and link to the
 `implementation-log.md` is a conditional decision log; the triggers that justify creating it live in SKILL.md. It is append-only except for removing accidental secrets or obvious noise. Do not rewrite history after a plan changes; add a new entry explaining the change. The handoff always declares whether a log exists (references/handoff-discipline.md).
 
 `handoff.md` is the takeover document. Rewrite it near completion so it is short, accurate, and useful without reading the whole log. references/handoff-discipline.md defines the required fields.
+
+`report.json` is the human layer of a closed milestone, and `report.html` is its rendered page. It restates the brief, handoff, and log in plain language and never holds facts they lack; references/report.md defines the fields. `docs/tasks/index.html` is the generated overview of every milestone for people; it reads only reports, task brief titles, and handoff status and dates.
 
 `docs/tasks/INDEX.md`, when its conditions in SKILL.md are met, is a registry, not a second plan. Each row should point to the task dossier and latest handoff, name the module/surface, record status, and list upstream/downstream task references using stable relative links.
 
