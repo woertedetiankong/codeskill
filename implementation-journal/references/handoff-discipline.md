@@ -11,7 +11,7 @@ Keep the layers distinct. The entry is a launch instruction and errata layer, no
 
 ## Read Budget
 
-The handoff competes for two scarce budgets: the next session's context window and the human's skim time. Target one screen — about 60 lines. When a handoff grows past that, move narrative and history into `implementation-log.md` and link it; the handoff keeps conclusions and pointers.
+The handoff competes for two scarce budgets: the next session's context window and the human's skim time. Target about 100 lines; the validator warns past that. When a handoff grows longer, move narrative and history into `implementation-log.md` and link it; the handoff keeps conclusions and pointers.
 
 ## Handoff Fields
 
@@ -50,33 +50,18 @@ Do not write "verify manually" when a command would be more precise. If validati
 
 ## New-Session Entry
 
-Place this at `docs/tasks/NEXT-SESSION.md`, or in the repo's existing todo/session file if one exists:
+The format lives in references/templates.md. Rules for the content:
 
-```markdown
-# Next Session
+- It must work when pasted as the first message of a new session.
+- Write red lines as commands the agent can obey. "Be careful" is not enforceable; "do not push until the user explicitly says push" is enforceable.
+- When a new handoff supersedes the old one, rewrite the entry. Keep older entries only if the repo already preserves historical entries; otherwise link history from the handoff chain.
 
-Project <path> (<name>). Read `<handoff path>` first.
-Previous session: <one-sentence result with evidence>.
-Errata: <known stale section in the handoff, or "None known">.
-Current state: <one-sentence board>.
-Environment: <special environment state or "None known">.
-Now do: 1. <next step> 2. <next step>.
-Red lines: <enforceable instruction>; <enforceable instruction>.
-First verify: `<command>` (expected <output>; mismatch means <diagnosis>).
-```
-
-The entry doubles as the restart opener: it must work when pasted as the first message of a new session. Write red lines as commands the agent can obey. "Be careful" is not enforceable; "do not push until the user explicitly says push" is enforceable.
-
-When a new handoff supersedes the old one, rewrite this entry. Keep older entries only if the repo already preserves historical entries; otherwise link history from the handoff chain.
-
-## Write-Back Discipline
-
-Write back after each verified work unit, such as a passing test run, a committed change, a settled decision, an unblocked dependency, or a newly discovered risk. Record progress plus evidence plus changed next steps.
+## Evidence
 
 Do not mark work done without evidence. If tests were not run, say so. If a PR is not merged, do not write that it is merged.
 
 ## History And Knowledge Boundaries
 
-Do not silently rewrite append-only implementation logs. For handoffs, prefer rewriting to current truth near completion; if preserving historical handoff snapshots is a project convention, create a new handoff and link it with `supersedes`.
+For handoffs, prefer rewriting to current truth near completion; if preserving historical handoff snapshots is a project convention, create a new handoff and link it with `supersedes`. The implementation log is append-only (references/document-model.md).
 
 Handoff stores operational state needed for the next session. Durable lessons, reusable architecture knowledge, integration contracts, and conventions belong in README/docs/wiki/decision records.

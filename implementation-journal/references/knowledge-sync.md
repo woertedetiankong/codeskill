@@ -30,11 +30,9 @@ If code and product intent conflict, document the mismatch as a risk or open que
 ## Editing Principles
 
 - Merge before appending. If a current-facing paragraph is now wrong, rewrite it.
-- Delete stale final-state claims. A stale claim with a correction underneath is still a trap.
+- Delete stale final-state claims. A stale claim with a correction underneath is still a trap; replace or remove it, never append.
 - Preserve important history in append-only logs or decision records, not in README or topic pages.
-- Use absolute dates. Do not write "today", "yesterday", "recently", "now", or "last week".
 - Keep audience boundaries clean: README/docs teach users, AGENTS/CLAUDE guide agents, wiki pages compile durable knowledge, logs explain how decisions happened.
-- Write confirmed cross-module durable knowledge as soon as it can affect another active or upcoming module, per the immediate-update rule in SKILL.md; do not wait for final cleanup.
 - Do not update global agent memory for ordinary project details.
 
 ## Cleanup Checklist
@@ -49,10 +47,7 @@ Before declaring the journal complete:
 - Check AGENTS/CLAUDE claims against the repo.
 - Update wiki index links when creating, renaming, or deleting wiki pages.
 - Append a wiki log entry when the wiki materially changed.
-- Remove relative dates introduced by the update.
 - If multiple projects were touched or an upstream/downstream contract changed, search dependent project docs too.
-
-Anti-pattern: do not leave stale instructions in place and append a correction underneath. Replace the stale instruction or remove it.
 
 ## Deletion Policy
 

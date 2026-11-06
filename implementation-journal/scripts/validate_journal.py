@@ -5,7 +5,8 @@ Checks the mechanical rules from SKILL.md and references/ so drift is caught
 by a command instead of model diligence:
 
 - handoff.md: frontmatter (status/updated), required sections, a runnable
-  Restart Verify block with expected outputs, no "verify manually".
+  Restart Verify block with expected outputs, no "verify manually",
+  read budget (WARN past HANDOFF_MAX_LINES).
 - task-brief.md: Goal, Success Criteria, Parent plan, Created date.
 - implementation-log.md: dated entry headings; consistency with the handoff
   (a missing log must be declared "Not required" in the handoff).
@@ -39,9 +40,12 @@ PLACEHOLDERS = (
     "<YYYY-MM-DD>", "<command 1>", "<Verifiable criterion>",
     "<One concrete sentence", "<observable output>", "<milestone or slice>",
     "<Next action", "<one-sentence result", "<enforceable instruction",
-    "<Decision and rationale", "<Risk or", "<Follow-up or", "<Assumption or",
+    "<Decision and rationale", "<Risk>", "<Follow-up>", "<Assumption or",
+    "<path or subsystem>", "<special environment state",
 )
 HANDOFF_REQUIRED = ("Summary", "Current State", "Next Steps", "Restart Verify")
+# references/handoff-discipline.md read budget.
+HANDOFF_MAX_LINES = 100
 # Always written even when one line, because their absence is ambiguous.
 HANDOFF_DECLARE = ("Git And Persistent State", "Implementation Log")
 # A conditional section whose every line matches this is placeholder-only
@@ -133,6 +137,9 @@ def check_common(path, lines, report):
 
 def check_handoff(path, report):
     lines = read_lines(path)
+    if len(lines) > HANDOFF_MAX_LINES:
+        report.warn(path, len(lines),
+                    f"handoff is {len(lines)} lines (budget {HANDOFF_MAX_LINES}) — move narrative into implementation-log.md")
     fm, _ = parse_frontmatter(lines)
     status = fm.get("status", "")
     if not re.match(r"(Complete|Provisional)\b", status):
@@ -210,10 +217,11 @@ def check_next_session(path, report):
         report.error(path, 1, 'missing handoff pointer ("Read `<handoff path>` first")')
     else:
         target = Path(pointer.group(1))
-        for base in (path.parent, path.parent.parent, Path.cwd()):
-            if (base / target).exists() or target.is_absolute() and target.exists():
-                break
-        else:
+        # Pointers may be written relative to the entry, the repo root, or
+        # any directory between, so try every ancestor; cwd-independent.
+        bases = [path.resolve().parent, *path.resolve().parents]
+        if not (target.is_absolute() and target.exists()) \
+                and not any((base / target).exists() for base in bases):
             report.error(path, 1, f"handoff pointer does not resolve: {pointer.group(1)}")
     for field in ("Errata:", "Now do:", "Red lines:", "First verify:"):
         if field not in text:

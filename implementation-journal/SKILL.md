@@ -49,10 +49,10 @@ Read [references/knowledge-sync.md](references/knowledge-sync.md) before end-of-
 
 3. Log implementation memory only when a log trigger occurs.
    - Log triggers: behavior chosen for an ambiguous spec, hidden constraint discovered, approach abandoned, tradeoff made, intentional deviation from the plan, validation that changed understanding, risk or follow-up identified, or cross-session reasoning that would be hard to reconstruct.
-   - Create `implementation-log.md` at the first trigger, not before. If no trigger occurs, state that in the handoff instead of inventing entries.
+   - Create `implementation-log.md` at the first trigger, not before. If no trigger occurs, the handoff declares that (references/handoff-discipline.md) instead of inventing entries.
    - When a logged decision lands in code, record the commit hash or PR number in the entry so future debugging can jump from the decision to the diff.
    - Do not log file-opening commands, obvious edits, or narration that merely says "implemented X".
-   - After each verified work unit, write back meaningful progress, evidence, and changed next steps. Do not wait until the end of the chat if the state has materially changed.
+   - After each verified work unit (passing tests, a commit, a settled decision, a new risk), write back progress, evidence, and changed next steps. Do not wait until the end of the chat if the state has materially changed.
    - When a confirmed discovery affects shared contracts, architecture rules, integration behavior, or future slices, update the relevant docs immediately if another active or upcoming module may depend on it. Use a clearly named durable-knowledge follow-up only when the fact needs user confirmation, would expand scope, or cannot be safely edited now.
    - Use absolute dates such as `2026-06-10`; never relative dates such as "today" or "recently".
 
@@ -61,22 +61,22 @@ Read [references/knowledge-sync.md](references/knowledge-sync.md) before end-of-
    - Refresh the new-session entry so it points at the latest handoff. If part of the handoff is already stale, record the correction as errata in the entry instead of silently rewriting history.
 
 5. Reconcile durable knowledge.
-   - Update the long-term plan status for the slice with absolute dates and links to the dossier or handoff. For an in-repo plan, refresh its status dashboard: the milestone row, needs-your-judgment questions, recently closed decisions, and top risks.
-   - Update README, AGENTS/CLAUDE guidance, docs, and existing wiki pages that now describe stale behavior: merge duplicates, rewrite outdated sections, delete superseded claims. Preserve important history in the implementation log or a decision record, not in current-facing docs. Never leave a stale instruction with an "Update: ..." appended underneath — replace or remove it.
+   - Update the long-term plan status for the slice with absolute dates and links to the dossier or handoff. For an in-repo plan, refresh its status dashboard per references/document-model.md.
+   - Update README, AGENTS/CLAUDE guidance, docs, and existing wiki pages that now describe stale behavior: merge duplicates, rewrite outdated sections, delete superseded claims. Replace a stale instruction; never leave it in place with a correction appended underneath. Preserve important history in the implementation log or a decision record, not in current-facing docs.
    - Run the cleanup loop in references/knowledge-sync.md: inventory likely stale docs, classify each as rewrite/merge/delete/keep, edit, then rerun targeted searches for the old commands, names, routes, or claims.
 
 ## Quality Gate
 
 Before finishing a milestone, run the mechanical check, then judge what it cannot see.
 
-Run [scripts/validate_journal.py](scripts/validate_journal.py) with python3, passing the repo's tasks dir or the touched dossier files — plus any reconciled docs, so the relative-date and broken-link checks cover them. Fix every ERROR and rerun until clean. Accept a WARN only deliberately and name it in the final response. If python3 is unavailable, say so and apply the same checks by hand.
+Run [scripts/validate_journal.py](scripts/validate_journal.py) with python3 from the repo root (in Claude Code the path is `${CLAUDE_SKILL_DIR}/scripts/validate_journal.py`), passing the repo's tasks dir or the touched dossier files — plus any reconciled docs, so the relative-date and broken-link checks cover them. Fix every ERROR and rerun until clean. Accept a WARN only deliberately and name it in the final response. If python3 is unavailable, say so and apply the same checks by hand.
 
-Then check by judgment:
+Then check by judgment, since the script checks presence and shape, not truth:
 
-- `handoff.md` reflects the actual final code state (or is clearly marked provisional), and its restart verify expected-outputs are truthful — the script checks their presence, not their truth.
-- `implementation-log.md` exists only if log triggers actually occurred; if it does not exist, the handoff states that no log was required.
-- The new-session entry points to the latest handoff and records known errata.
-- Current-facing docs and wiki contain no stale claims about the changed behavior, and the long-term plan status is updated when a parent plan exists — including the status dashboard when the plan is in-repo.
+- `handoff.md` reflects the actual final code state (or is clearly marked provisional), and its restart verify expected-outputs are truthful.
+- `implementation-log.md` exists only if log triggers actually occurred.
+- The new-session entry points to the latest handoff, not merely to one that exists.
+- Current-facing docs and wiki contain no stale claims about the changed behavior, and the long-term plan status (including an in-repo dashboard) is updated when a parent plan exists.
 
 ## Final Response
 

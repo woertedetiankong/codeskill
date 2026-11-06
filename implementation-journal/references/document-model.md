@@ -52,7 +52,7 @@ When a slice starts, mark it `In progress` with an absolute date and link to the
 
 `task-brief.md` is the contract. It should include the selected slice, success criteria, scope, constraints, source plan link, and expected docs/wiki touchpoints.
 
-`implementation-log.md` is a conditional decision log; the triggers that justify creating it live in SKILL.md. It is append-only except for removing accidental secrets or obvious noise. Append dated entries when meaningful decisions happen, and record the commit hash or PR number once a logged decision lands in code. Do not rewrite history after a plan changes; add a new entry explaining the change. If no log trigger occurs, record `Implementation log: Not required - no meaningful decision trail occurred` in the handoff.
+`implementation-log.md` is a conditional decision log; the triggers that justify creating it live in SKILL.md. It is append-only except for removing accidental secrets or obvious noise. Do not rewrite history after a plan changes; add a new entry explaining the change. The handoff always declares whether a log exists (references/handoff-discipline.md).
 
 `handoff.md` is the takeover document. Rewrite it near completion so it is short, accurate, and useful without reading the whole log. references/handoff-discipline.md defines the required fields.
 
@@ -65,7 +65,7 @@ Use stable relative links when one module references another module's dossier, h
 - Referenced by: [billing import](../2026-06-12-billing-import/handoff.md) - user identity mapping
 ```
 
-The new-session entry is the first landing point for a new chat. Use the repo's established session/todo file, or `docs/tasks/NEXT-SESSION.md` by default. It doubles as the pasteable restart opener and the errata layer for the latest handoff; keep state details in the handoff so the entry does not become a competing authority.
+The new-session entry is the first landing point for a new chat, at the repo's established session/todo file or `docs/tasks/NEXT-SESSION.md` by default. Its role and rules live in references/handoff-discipline.md.
 
 ## Project Wiki
 
@@ -83,4 +83,4 @@ A wiki maintained by an automated documenter (for example `openwiki/`, generated
 ## [2026-06-10] milestone | Implementation journal refactor
 ```
 
-Topic pages should be edited in place as understanding improves. Remove stale claims rather than piling new corrections underneath them.
+Topic pages should be edited in place as understanding improves.
