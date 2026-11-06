@@ -34,18 +34,78 @@ DOSSIER_RE = re.compile(r"^(\d{4}-\d{2}-\d{2})-([a-z0-9][a-z0-9-]*)$")
 DATE_RE = re.compile(r"^\d{4}-\d{2}-\d{2}$")
 MONTHS = ("Jan", "Feb", "Mar", "Apr", "May", "Jun",
           "Jul", "Aug", "Sep", "Oct", "Nov", "Dec")
-OUTCOME_LABELS = {"done": "Done", "partial": "Partly done", "dropped": "Dropped"}
 OUTCOME_ICONS = {"done": "check", "partial": "half", "dropped": "x"}
-KIND_LABELS = {
-    "started": "Started", "decision": "Decision", "found": "Found out",
-    "changed-course": "Changed course", "paused": "Paused", "finished": "Finished",
-}
 KIND_ICONS = {
     "started": "flag", "decision": "fork", "found": "bulb",
     "changed-course": "turn", "paused": "pause", "finished": "check",
 }
-STEP_LABELS = {"done": "Done", "dropped": "Dropped", "current": "In progress",
-               "next": "Next", "later": "Later"}
+
+# Page text per report language (report.json "lang"; English when absent).
+LABELS = {
+    "en": {
+        "html": "en", "sp": " ", "brand": "Journal", "theme": "Switch between light and dark",
+        "outcome": {"done": "Done", "partial": "Partly done", "dropped": "Dropped"},
+        "kind": {"started": "Started", "decision": "Decision", "found": "Found out",
+                 "changed-course": "Changed course", "paused": "Paused", "finished": "Finished"},
+        "step": {"done": "Done", "dropped": "Dropped", "current": "In progress",
+                 "next": "Next", "later": "Later"},
+        "finished_on": "Finished {date}", "closed_on": "Closed {date}",
+        "result": "Result", "done_when": "Done when", "met": "{met} of {n} met", "not_met": "Not met: ",
+        "plan": "The plan", "step_of": "Step {i} of {n}", "this": "This milestone",
+        "changed": "What changed", "before": "Before", "now": "Now",
+        "keep": "Keep in mind", "todo": "What to do:",
+        "choices": "Choices made", "by_you": "You decided", "by_claude": "Claude decided",
+        "why": "Why:", "instead_of": "Instead of: ",
+        "story": "How it went", "show_ex": "Show example", "hide_ex": "Hide example",
+        "show_why": "Show why it matters", "hide_why": "Hide why it matters",
+        "matters": "Why it matters:",
+        "dropped": "Dropped along the way", "instead": "Instead:", "dropped_on": "Dropped {date}",
+        "touched": "Parts of the app touched", "docs": "Docs updated", "next": "What’s next",
+        "details": "Details", "foot": "Written from this milestone’s journal on {date}.",
+        "all": "All milestones", "title": "{name} report", "untitled": "Milestone",
+        "ix_title": "{project} milestones", "ix_count_fin": "{n} finished",
+        "ix_count_open": "{n} in progress", "ix_join": " and ", "ix_none": "No milestones yet",
+        "ix_open": "In progress", "ix_fin": "Finished", "ix_no_report": "No report",
+        "ix_started": "Started {date}", "ix_kicker_plan": "{milestone} in {plan}",
+        "ix_goals": "{met} of {n} goals met", "ix_you_1": "1 choice by you",
+        "ix_you_n": "{n} choices by you", "ix_risks": "{n} to keep in mind",
+        "ix_empty": "When a milestone closes, its report shows up here.",
+    },
+    "zh": {
+        "html": "zh-CN", "sp": "", "brand": "开发日志", "theme": "切换深色或浅色",
+        "outcome": {"done": "完成", "partial": "部分完成", "dropped": "已放弃"},
+        "kind": {"started": "开始", "decision": "决定", "found": "发现",
+                 "changed-course": "改变方向", "paused": "暂停", "finished": "完成"},
+        "step": {"done": "已完成", "dropped": "已放弃", "current": "进行中",
+                 "next": "下一步", "later": "之后"},
+        "finished_on": "{date}完成", "closed_on": "{date}关闭",
+        "result": "结果", "done_when": "完成标准", "met": "达成 {met}/{n}", "not_met": "未达成：",
+        "plan": "计划", "step_of": "第 {i} 步，共 {n} 步", "this": "本里程碑",
+        "changed": "有什么变化", "before": "之前", "now": "现在",
+        "keep": "需要留意", "todo": "要做的事：",
+        "choices": "做过的决定", "by_you": "你决定的", "by_claude": "Claude 决定的",
+        "why": "原因：", "instead_of": "没选：",
+        "story": "过程", "show_ex": "看例子", "hide_ex": "收起例子",
+        "show_why": "看为什么重要", "hide_why": "收起",
+        "matters": "为什么重要：",
+        "dropped": "中途放弃的", "instead": "改为：", "dropped_on": "{date}放弃",
+        "touched": "涉及的部分", "docs": "更新的文档", "next": "接下来",
+        "details": "其他信息", "foot": "根据本里程碑的开发记录整理，{date}。",
+        "all": "全部里程碑", "title": "{name}报告", "untitled": "里程碑",
+        "ix_title": "{project}的里程碑", "ix_count_fin": "已完成 {n} 个",
+        "ix_count_open": "进行中 {n} 个", "ix_join": "，", "ix_none": "还没有里程碑",
+        "ix_open": "进行中", "ix_fin": "已完成", "ix_no_report": "没有报告",
+        "ix_started": "{date}开始", "ix_kicker_plan": "{milestone}，属于{plan}",
+        "ix_goals": "目标达成 {met}/{n}", "ix_you_1": "你做了 1 个决定",
+        "ix_you_n": "你做了 {n} 个决定", "ix_risks": "{n} 件事需要留意",
+        "ix_empty": "里程碑结束后，报告会出现在这里。",
+    },
+}
+
+
+def labels(lang):
+    return LABELS.get(lang) or LABELS["en"]
+
 
 ICON_PATHS = {
     "check": '<path d="M5 12l5 5L19 7"/>',
@@ -299,6 +359,13 @@ details .why{margin-top:12px}
 
 .foot{font-size:13px;color:var(--muted);border-top:1px solid var(--line);padding-top:20px;margin-top:-24px}
 
+html[lang^="zh"]{
+  --head:"Space Grotesk",Inter,ui-sans-serif,system-ui,-apple-system,"PingFang SC","Hiragino Sans GB","Microsoft YaHei","Noto Sans CJK SC",sans-serif;
+  --body:Inter,ui-sans-serif,system-ui,-apple-system,"PingFang SC","Hiragino Sans GB","Microsoft YaHei","Noto Sans CJK SC",sans-serif}
+html[lang^="zh"] body{line-height:1.7}
+html[lang^="zh"] h1,html[lang^="zh"] h2,html[lang^="zh"] h3,html[lang^="zh"] .res-t b{letter-spacing:0}
+html[lang^="zh"] h1{line-height:1.2}
+
 @media (max-width:960px){
   .hero{grid-template-columns:minmax(0,1fr);gap:28px}
   .result{max-width:520px}
@@ -412,7 +479,7 @@ window.addEventListener("beforeprint", function () {
 </script>"""
 
 PAGE = """<!doctype html>
-<html lang="en">
+<html lang="%%LANG%%">
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
@@ -425,9 +492,9 @@ PAGE = """<!doctype html>
   <div class="wrap top-in">
     <div class="brand">
       <span class="logo">%%LOGO%%</span>
-      <span class="brand-t"><b>Journal</b><small>%%PROJECT%%</small></span>
+      <span class="brand-t"><b>%%BRAND%%</b><small>%%PROJECT%%</small></span>
     </div>
-    <div class="top-r">%%NAV%%<button class="theme" type="button" aria-label="Switch between light and dark" onclick="%%TOGGLE%%">%%MOON%%%%SUN%%</button></div>
+    <div class="top-r">%%NAV%%<button class="theme" type="button" aria-label="%%THEME%%" onclick="%%TOGGLE%%">%%MOON%%%%SUN%%</button></div>
   </div>
 </header>
 <main class="wrap">
@@ -450,13 +517,15 @@ def icon(name, size=18, width=2, cls=""):
             f'stroke-linejoin="round" aria-hidden="true">{ICON_PATHS[name]}</svg>')
 
 
-def fmt_date(value, year=False):
+def fmt_date(value, t, year=False):
     try:
         y, m, d = (int(part) for part in str(value).split("-"))
-        label = f"{MONTHS[m - 1]} {d}"
+        month = MONTHS[m - 1]
     except (ValueError, IndexError):
         return esc(value)
-    return f"{label}, {y}" if year else label
+    if t["html"].startswith("zh"):
+        return f"{y}年{m}月{d}日" if year else f"{m}月{d}日"
+    return f"{month} {d}, {y}" if year else f"{month} {d}"
 
 
 def dicts(value):
@@ -472,20 +541,20 @@ def grid_cols(n):
     return {1: 1, 2: 2, 4: 2}.get(n, 3)
 
 
-def result_panel(data):
+def result_panel(data, t):
     outcome = data.get("outcome")
     rows = dicts(data.get("doneWhen"))
-    if outcome not in OUTCOME_LABELS and not rows:
+    if outcome not in t["outcome"] and not rows:
         return ""
     parts = []
-    if outcome in OUTCOME_LABELS:
+    if outcome in t["outcome"]:
         sub = ""
         if data.get("finished"):
-            verb = "Closed" if outcome == "dropped" else "Finished"
-            sub = f'<span>{verb} {fmt_date(data["finished"], year=True)}</span>'
+            key = "closed_on" if outcome == "dropped" else "finished_on"
+            sub = f'<span>{t[key].format(date=fmt_date(data["finished"], t, year=True))}</span>'
         parts.append(
             f'<div class="res-h"><span class="res-i">{icon(OUTCOME_ICONS[outcome], 24, 3)}</span>'
-            f'<span class="res-t"><b>{OUTCOME_LABELS[outcome]}</b>{sub}</span></div>')
+            f'<span class="res-t"><b>{t["outcome"][outcome]}</b>{sub}</span></div>')
     if rows:
         items = []
         met_count = 0
@@ -493,45 +562,45 @@ def result_panel(data):
             met = row.get("met") is True
             met_count += met
             tick = icon("check", 12, 3.5) if met else ""
-            hidden = "" if met else '<span class="vh">Not met: </span>'
+            hidden = "" if met else f'<span class="vh">{t["not_met"]}</span>'
             cls = "met" if met else "unmet"
             items.append(f'<li class="{cls}"><span class="tick">{tick}</span>'
                          f'<span>{hidden}{esc(row.get("text", ""))}</span></li>')
         parts.append(
-            '<div class="checks-b"><div class="checks-h"><h2 id="done-h">Done when</h2>'
-            f'<span>{met_count} of {len(rows)} met</span></div>'
+            f'<div class="checks-b"><div class="checks-h"><h2 id="done-h">{t["done_when"]}</h2>'
+            f'<span>{t["met"].format(met=met_count, n=len(rows))}</span></div>'
             '<ul class="checks" aria-labelledby="done-h">' + "".join(items) + "</ul></div>")
-    cls = f"panel result o-{outcome}" if outcome in OUTCOME_LABELS else "panel result"
-    return f'<aside class="{cls}" aria-label="Result">' + "".join(parts) + "</aside>"
+    cls = f"panel result o-{outcome}" if outcome in t["outcome"] else "panel result"
+    return f'<aside class="{cls}" aria-label="{t["result"]}">' + "".join(parts) + "</aside>"
 
 
-def hero(data):
+def hero(data, t):
     goal = f'<p class="goal">{esc(data["goal"])}</p>' if data.get("goal") else ""
     kicker = f'<p class="kicker">{esc(data["milestone"])}</p>' if data.get("milestone") else ""
-    panel = result_panel(data)
+    panel = result_panel(data, t)
     cls = "hero" if panel else "hero solo"
     return (f'<section class="{cls}"><div class="hero-t">{kicker}'
             f'<h1>{esc(data.get("headline", ""))}</h1>{goal}</div>{panel}</section>')
 
 
-def section_plan(plan):
+def section_plan(plan, t):
     steps = dicts(plan.get("steps")) if isinstance(plan, dict) else []
     if not steps:
         return ""
     items = []
     position = ""
     for i, step in enumerate(steps):
-        state = step.get("state") if step.get("state") in STEP_LABELS else "later"
+        state = step.get("state") if step.get("state") in t["step"] else "later"
         marks = {"done": icon("check", 18, 3), "dropped": icon("x", 16, 2.5), "current": icon("dot", 18)}
         mark = marks.get(state, str(i + 1))
-        sub = STEP_LABELS[state]
+        sub = t["step"][state]
         if step.get("date") and state in ("done", "dropped"):
-            sub += " " + fmt_date(step["date"])
+            sub += " " + fmt_date(step["date"], t)
         note = f'<span class="step-s">{esc(step["note"])}</span>' if step.get("note") else ""
         this = step.get("thisMilestone") is True
         if this:
-            position = f'<span class="count">Step {i + 1} of {len(steps)}</span>'
-        tag = '<span class="this-tag">This milestone</span>' if this else ""
+            position = f'<span class="count">{t["step_of"].format(i=i + 1, n=len(steps))}</span>'
+        tag = f'<span class="this-tag">{t["this"]}</span>' if this else ""
         bar = ""
         if i < len(steps) - 1:
             on = state in ("done", "dropped") and steps[i + 1].get("state") in ("done", "dropped", "current")
@@ -543,14 +612,14 @@ def section_plan(plan):
             f'<li class="{li_cls}"{current}><div class="node"><span class="dot">{mark}</span>{bar}</div>'
             f'<div class="step-t"><span class="step-n">{esc(step.get("name", ""))}</span>'
             f'<span class="step-s">{sub}</span>{note}{tag}</div></li>')
-    name = esc(plan.get("name") or "The plan")
+    name = esc(plan.get("name") or t["plan"])
     return (f'<section class="panel plan" aria-labelledby="plan-h">'
             f'<div class="sec-h"><h2 id="plan-h">{name}</h2>{position}</div>'
             f'<div class="track-scroll"><ol class="track" style="--n:{len(steps)}">'
             + "".join(items) + "</ol></div></section>")
 
 
-def section_changes(changes):
+def section_changes(changes, t):
     rows = dicts(changes)
     if not rows:
         return ""
@@ -558,16 +627,16 @@ def section_changes(changes):
     for row in rows:
         items.append(
             f'<li class="cmp-row"><span class="cmp-what">{esc(row.get("what", ""))}</span>'
-            f'<span class="cmp-before"><span class="cmp-l">Before</span><span>{esc(row.get("before", ""))}</span></span>'
+            f'<span class="cmp-before"><span class="cmp-l">{t["before"]}</span><span>{esc(row.get("before", ""))}</span></span>'
             f'<span class="cmp-arrow">{icon("arrow", 18, 2)}</span>'
-            f'<span class="cmp-now"><span class="cmp-l">Now</span><span>{esc(row.get("after", ""))}</span></span></li>')
-    head = ('<div class="cmp-head" aria-hidden="true"><span></span><span>Before</span><span></span>'
-            '<span class="now-h">Now</span></div>')
-    return ('<section class="sec" aria-labelledby="chg-h"><h2 id="chg-h">What changed</h2>'
+            f'<span class="cmp-now"><span class="cmp-l">{t["now"]}</span><span>{esc(row.get("after", ""))}</span></span></li>')
+    head = (f'<div class="cmp-head" aria-hidden="true"><span></span><span>{t["before"]}</span><span></span>'
+            f'<span class="now-h">{t["now"]}</span></div>')
+    return (f'<section class="sec" aria-labelledby="chg-h"><h2 id="chg-h">{t["changed"]}</h2>'
             f'<div class="panel cmp">{head}<ul>' + "".join(items) + "</ul></div></section>")
 
 
-def section_risks(risks):
+def section_risks(risks, t):
     rows = dicts(risks)
     if not rows:
         return ""
@@ -577,12 +646,12 @@ def section_risks(risks):
         items.append(
             f'<li class="risk"><span class="risk-i">{icon("alert", 18)}</span>'
             f'<p class="risk-t">{esc(row.get("risk", ""))}</p>{when}'
-            f'<p class="todo"><b>What to do:</b> {esc(row.get("action", ""))}</p></li>')
-    return ('<section class="sec" aria-labelledby="risk-h"><h2 id="risk-h">Keep in mind</h2>'
+            f'<p class="todo"><b>{t["todo"]}</b>{t["sp"]}{esc(row.get("action", ""))}</p></li>')
+    return (f'<section class="sec" aria-labelledby="risk-h"><h2 id="risk-h">{t["keep"]}</h2>'
             '<ul class="risks">' + "".join(items) + "</ul></section>")
 
 
-def section_decisions(decisions):
+def section_decisions(decisions, t):
     rows = dicts(decisions)
     if not rows:
         return ""
@@ -590,36 +659,36 @@ def section_decisions(decisions):
     for row in rows:
         by_you = row.get("by") == "you"
         cls = "panel dec by-you" if by_you else "panel dec"
-        who = "You decided" if by_you else "Claude decided"
-        when = f'<span>{fmt_date(row["date"])}</span>' if row.get("date") else ""
+        who = t["by_you"] if by_you else t["by_claude"]
+        when = f'<span>{fmt_date(row["date"], t)}</span>' if row.get("date") else ""
         cards.append(
             f'<article class="{cls}"><div class="dec-meta"><span class="who">{who}</span>{when}</div>'
             f'<div class="fork">{FORK_ART}<div class="fork-t">'
             f'<h3>{esc(row.get("picked", ""))}</h3>'
-            f'<s class="over"><span class="vh">Instead of: </span>{esc(row.get("over", ""))}</s></div></div>'
-            f'<p class="why"><b>Why:</b> {esc(row.get("why", ""))}</p></article>')
+            f'<s class="over"><span class="vh">{t["instead_of"]}</span>{esc(row.get("over", ""))}</s></div></div>'
+            f'<p class="why"><b>{t["why"]}</b>{t["sp"]}{esc(row.get("why", ""))}</p></article>')
     n = len(cards)
     cls = "decs one" if n == 1 else "decs"
-    return ('<section class="sec" aria-labelledby="dec-h"><h2 id="dec-h">Choices made</h2>'
+    return (f'<section class="sec" aria-labelledby="dec-h"><h2 id="dec-h">{t["choices"]}</h2>'
             f'<div class="{cls}" style="--cols:{grid_cols(n)}">' + "".join(cards) + "</div></section>")
 
 
-def section_story(story):
+def section_story(story, t):
     rows = dicts(story)
     if not rows:
         return ""
     items = []
     for row in rows:
-        kind = row.get("kind") if row.get("kind") in KIND_LABELS else "started"
-        when = fmt_date(row["date"]) if row.get("date") else ""
-        meta = f'<b>{when}</b><span class="ev-kind">{KIND_LABELS[kind]}</span>'
+        kind = row.get("kind") if row.get("kind") in t["kind"] else "started"
+        when = fmt_date(row["date"], t) if row.get("date") else ""
+        meta = f'<b>{when}</b><span class="ev-kind">{t["kind"][kind]}</span>'
         details = ""
         if row.get("example") or row.get("why"):
             example = f'<p class="ex">{esc(row["example"])}</p>' if row.get("example") else ""
-            why = f'<p class="why"><b>Why it matters:</b> {esc(row["why"])}</p>' if row.get("why") else ""
-            what = "example" if row.get("example") else "why it matters"
-            details = (f'<details><summary><span class="lbl"><span class="show">Show {what}</span>'
-                       f'<span class="hide">Hide {what}</span></span>{icon("chev", 16, 2.5, "chev")}</summary>'
+            why = f'<p class="why"><b>{t["matters"]}</b>{t["sp"]}{esc(row["why"])}</p>' if row.get("why") else ""
+            show, hide = (t["show_ex"], t["hide_ex"]) if row.get("example") else (t["show_why"], t["hide_why"])
+            details = (f'<details><summary><span class="lbl"><span class="show">{show}</span>'
+                       f'<span class="hide">{hide}</span></span>{icon("chev", 16, 2.5, "chev")}</summary>'
                        f'{example}{why}</details>')
         summary = f'<p class="ev-sum">{esc(row["summary"])}</p>' if row.get("summary") else ""
         items.append(
@@ -627,29 +696,31 @@ def section_story(story):
             f'<div class="rail"><span class="ev-dot">{icon(KIND_ICONS[kind], 18)}</span></div>'
             f'<div class="ev-body"><div class="ev-d">{meta}</div>'
             f'<h3>{esc(row.get("title", ""))}</h3>{summary}{details}</div></li>')
-    return ('<section class="sec" aria-labelledby="story-h"><h2 id="story-h">How it went</h2>'
+    return (f'<section class="sec" aria-labelledby="story-h"><h2 id="story-h">{t["story"]}</h2>'
             '<ol class="timeline">' + "".join(items) + "</ol></section>")
 
 
-def section_dropped(dropped):
+def section_dropped(dropped, t):
     rows = dicts(dropped)
     if not rows:
         return ""
     cards = []
     for row in rows:
-        instead = f'<p class="instead"><b>Instead:</b> {esc(row["instead"])}</p>' if row.get("instead") else ""
-        when = f'<p class="drop-when">Dropped {fmt_date(row["date"])}</p>' if row.get("date") else ""
+        instead = f'<p class="instead"><b>{t["instead"]}</b>{t["sp"]}{esc(row["instead"])}</p>' if row.get("instead") else ""
+        when = ""
+        if row.get("date"):
+            when = f'<p class="drop-when">{t["dropped_on"].format(date=fmt_date(row["date"], t))}</p>'
         cards.append(
             f'<li class="drop"><div class="drop-h"><span class="drop-x">{icon("x", 14, 2.5)}</span>'
             f'<h3>{esc(row.get("what", ""))}</h3></div>{instead}'
             f'<p class="why">{esc(row.get("why", ""))}</p>{when}</li>')
-    return ('<section class="sec side" aria-labelledby="drop-h"><h2 id="drop-h">Dropped along the way</h2>'
+    return (f'<section class="sec side" aria-labelledby="drop-h"><h2 id="drop-h">{t["dropped"]}</h2>'
             '<ul class="drops">' + "".join(cards) + "</ul></section>")
 
 
-def story_row(data):
-    story = section_story(data.get("story"))
-    dropped = section_dropped(data.get("dropped"))
+def story_row(data, t):
+    story = section_story(data.get("story"), t)
+    dropped = section_dropped(data.get("dropped"), t)
     if not story:
         return dropped
     if not dropped:
@@ -657,34 +728,37 @@ def story_row(data):
     return f'<div class="story-grid">{story}{dropped}</div>'
 
 
-def section_facts(data):
+def section_facts(data, t):
     blocks = []
     touched = texts(data.get("touched"))
     if touched:
-        chips = "".join(f'<li class="chip">{esc(t)}</li>' for t in touched)
-        blocks.append(f'<div class="fact"><h2>Parts of the app touched</h2><ul class="chips">{chips}</ul></div>')
+        chips = "".join(f'<li class="chip">{esc(item)}</li>' for item in touched)
+        blocks.append(f'<div class="fact"><h2>{t["touched"]}</h2><ul class="chips">{chips}</ul></div>')
     docs = texts(data.get("docsUpdated"))
     if docs:
-        chips = "".join(f'<li class="chip">{icon("check", 14, 3)}{esc(t)}</li>' for t in docs)
-        blocks.append(f'<div class="fact"><h2>Docs updated</h2><ul class="chips">{chips}</ul></div>')
+        chips = "".join(f'<li class="chip">{icon("check", 14, 3)}{esc(item)}</li>' for item in docs)
+        blocks.append(f'<div class="fact"><h2>{t["docs"]}</h2><ul class="chips">{chips}</ul></div>')
     follow = texts(data.get("followUps"))
     if follow:
-        items = "".join(f"<li>{icon('arrow', 16, 2.5)}<span>{esc(t)}</span></li>" for t in follow)
-        blocks.append(f'<div class="fact"><h2>What’s next</h2><ul class="next">{items}</ul></div>')
+        items = "".join(f"<li>{icon('arrow', 16, 2.5)}<span>{esc(item)}</span></li>" for item in follow)
+        blocks.append(f'<div class="fact"><h2>{t["next"]}</h2><ul class="next">{items}</ul></div>')
     if not blocks:
         return ""
-    return (f'<section class="panel facts" aria-label="Details" style="--cols:{len(blocks)}">'
+    return (f'<section class="panel facts" aria-label="{t["details"]}" style="--cols:{len(blocks)}">'
             + "".join(blocks) + "</section>")
 
 
-def page(title, project, body, css=CSS, nav=""):
+def page(title, project, body, t, css=CSS, nav=""):
     replacements = {
+        "%%LANG%%": t["html"],
         "%%TITLE%%": esc(title),
         "%%BOOT%%": THEME_BOOT,
         "%%CSS%%": css,
         "%%LOGO%%": icon("book", 20),
+        "%%BRAND%%": t["brand"],
         "%%PROJECT%%": esc(project),
         "%%NAV%%": nav,
+        "%%THEME%%": t["theme"],
         "%%TOGGLE%%": TOGGLE_JS,
         "%%MOON%%": icon("moon", 18, 2, "moon"),
         "%%SUN%%": icon("sun", 18, 2, "sun"),
@@ -698,22 +772,23 @@ def page(title, project, body, css=CSS, nav=""):
 
 
 def render(data, index_href=None):
+    t = labels(data.get("lang"))
     body = [
-        hero(data),
-        section_plan(data.get("plan")),
-        section_changes(data.get("changes")),
-        section_risks(data.get("risks")),
-        section_decisions(data.get("decisions")),
-        story_row(data),
-        section_facts(data),
+        hero(data, t),
+        section_plan(data.get("plan"), t),
+        section_changes(data.get("changes"), t),
+        section_risks(data.get("risks"), t),
+        section_decisions(data.get("decisions"), t),
+        story_row(data, t),
+        section_facts(data, t),
     ]
     if data.get("finished"):
-        body.append(f'<p class="foot">Written from this milestone’s journal on {fmt_date(data["finished"], year=True)}.</p>')
+        body.append(f'<p class="foot">{t["foot"].format(date=fmt_date(data["finished"], t, year=True))}</p>')
     nav = ""
     if index_href:
-        nav = f'<a class="nav" href="{esc(index_href)}">{icon("back", 16, 2.5)}All milestones</a>'
-    title = f'{data.get("milestone") or "Milestone"} report'
-    return page(title, data.get("project", ""), body, nav=nav)
+        nav = f'<a class="nav" href="{esc(index_href)}">{icon("back", 16, 2.5)}{t["all"]}</a>'
+    title = t["title"].format(name=data.get("milestone") or t["untitled"])
+    return page(title, data.get("project", ""), body, t, nav=nav)
 
 
 # Overview page -------------------------------------------------------------
@@ -782,31 +857,41 @@ def project_name(tasks_dir, reports):
     return here.parent.name
 
 
-def index_row_finished(dossier, data):
+def index_lang(reports):
+    """The language most reports use; English on a tie or with no reports."""
+    counts = {}
+    for data in reports:
+        lang = data.get("lang") if data.get("lang") in LABELS else "en"
+        counts[lang] = counts.get(lang, 0) + 1
+    best = max(counts.values(), default=0)
+    return "en" if counts.get("en", 0) == best else max(counts, key=counts.get, default="en")
+
+
+def index_row_finished(dossier, data, t):
     outcome = data.get("outcome")
     pill = ""
-    if outcome in OUTCOME_LABELS:
-        pill = f'<span class="pill pill-{outcome}">{OUTCOME_LABELS[outcome]}</span>'
+    if outcome in t["outcome"]:
+        pill = f'<span class="pill pill-{outcome}">{t["outcome"][outcome]}</span>'
     when = data.get("finished") or DOSSIER_RE.match(dossier.name).group(1)
     kicker = esc(data.get("milestone") or dossier_name(dossier))
     plan = data.get("plan") if isinstance(data.get("plan"), dict) else {}
     if plan.get("name"):
-        kicker += f' <span class="vh">in plan</span><span aria-hidden="true">in</span> {esc(plan["name"])}'
+        kicker = t["ix_kicker_plan"].format(milestone=kicker, plan=esc(plan["name"]))
     tags = []
     goals = dicts(data.get("doneWhen"))
     if goals:
         met = sum(1 for g in goals if g.get("met") is True)
-        tags.append(f'<span class="tag">{icon("check", 13, 3)}{met} of {len(goals)} goals met</span>')
+        tags.append(f'<span class="tag">{icon("check", 13, 3)}{t["ix_goals"].format(met=met, n=len(goals))}</span>')
     yours = sum(1 for d in dicts(data.get("decisions")) if d.get("by") == "you")
     if yours:
-        word = "choice" if yours == 1 else "choices"
-        tags.append(f'<span class="tag you">{icon("fork", 13, 2.5)}{yours} {word} by you</span>')
+        text = t["ix_you_1"] if yours == 1 else t["ix_you_n"].format(n=yours)
+        tags.append(f'<span class="tag you">{icon("fork", 13, 2.5)}{text}</span>')
     risks = len(dicts(data.get("risks")))
     if risks:
-        tags.append(f'<span class="tag warn">{icon("alert", 13, 2.5)}{risks} to keep in mind</span>')
+        tags.append(f'<span class="tag warn">{icon("alert", 13, 2.5)}{t["ix_risks"].format(n=risks)}</span>')
     meta = f'<div class="row-meta">{"".join(tags)}</div>' if tags else ""
     href = f"{dossier.name}/report.html"
-    return (when, f'<li><a class="panel row" href="{esc(href)}"><span class="row-date">{fmt_date(when, year=True)}</span>'
+    return (when, f'<li><a class="panel row" href="{esc(href)}"><span class="row-date">{fmt_date(when, t, year=True)}</span>'
                   f'<span class="row-main"><span class="row-k">{kicker}</span>'
                   f'<span class="row-h">{esc(data.get("headline", ""))}</span>{meta}</span>'
                   f'<span class="row-end">{pill}<span class="row-go">{icon("right", 20, 2.5)}</span></span></a></li>')
@@ -819,22 +904,29 @@ def index_row_plain(dossier, label, cls, date_text, sort_date):
 
 
 def render_index(tasks_dir):
-    finished, open_rows, reports = [], [], []
+    entries, reports = [], []
     for dossier in dossiers_in(tasks_dir):
-        started = DOSSIER_RE.match(dossier.name).group(1)
         data = load_report(dossier / REPORT_NAME)
+        entries.append((dossier, data))
         if data is not None:
             reports.append(data)
-            finished.append(index_row_finished(dossier, data))
+    t = labels(index_lang(reports))
+
+    finished, open_rows = [], []
+    for dossier, data in entries:
+        started = DOSSIER_RE.match(dossier.name).group(1)
+        if data is not None:
+            finished.append(index_row_finished(dossier, data, t))
             continue
         handoff = frontmatter(read_text(dossier / "handoff.md"))
         if handoff.get("status", "").startswith("Complete"):
             updated = handoff.get("updated", "")
             when = updated if DATE_RE.match(updated) else started
-            finished.append(index_row_plain(dossier, "No report", "pill-none", fmt_date(when, year=True), when))
+            finished.append(index_row_plain(dossier, t["ix_no_report"], "pill-none",
+                                            fmt_date(when, t, year=True), when))
         else:
-            open_rows.append(index_row_plain(dossier, "In progress", "pill-open",
-                                             "Started " + fmt_date(started), started))
+            open_rows.append(index_row_plain(dossier, t["ix_open"], "pill-open",
+                                             t["ix_started"].format(date=fmt_date(started, t)), started))
     finished.sort(key=lambda row: row[0], reverse=True)
     open_rows.sort(key=lambda row: row[0], reverse=True)
     reports.sort(key=lambda d: str(d.get("finished", "")), reverse=True)
@@ -842,20 +934,20 @@ def render_index(tasks_dir):
 
     counts = []
     if finished:
-        counts.append(f"{len(finished)} finished")
+        counts.append(t["ix_count_fin"].format(n=len(finished)))
     if open_rows:
-        counts.append(f"{len(open_rows)} in progress")
-    summary = " and ".join(counts) if counts else "No milestones yet"
+        counts.append(t["ix_count_open"].format(n=len(open_rows)))
+    summary = t["ix_join"].join(counts) if counts else t["ix_none"]
     body = [f'<section class="ix-hero"><h1>{esc(project)}</h1><p class="ix-sum">{summary}</p></section>']
     if open_rows:
-        body.append('<section class="sec" aria-labelledby="open-h"><h2 id="open-h">In progress</h2>'
+        body.append(f'<section class="sec" aria-labelledby="open-h"><h2 id="open-h">{t["ix_open"]}</h2>'
                     '<ul class="rows">' + "".join(row for _, row in open_rows) + "</ul></section>")
     if finished:
-        body.append('<section class="sec" aria-labelledby="fin-h"><h2 id="fin-h">Finished</h2>'
+        body.append(f'<section class="sec" aria-labelledby="fin-h"><h2 id="fin-h">{t["ix_fin"]}</h2>'
                     '<ul class="rows">' + "".join(row for _, row in finished) + "</ul></section>")
     if not finished and not open_rows:
-        body.append('<p class="panel empty">When a milestone closes, its report shows up here.</p>')
-    return page(f"{project} milestones", project, body, css=CSS + INDEX_CSS)
+        body.append(f'<p class="panel empty">{t["ix_empty"]}</p>')
+    return page(t["ix_title"].format(project=project), project, body, t, css=CSS + INDEX_CSS)
 
 
 # Command line --------------------------------------------------------------

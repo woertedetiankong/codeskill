@@ -82,7 +82,8 @@ REPORT_LISTS = {
 }
 # field: (max items, words per item)
 REPORT_TEXT_LISTS = {"touched": (6, 4), "docsUpdated": (6, 4), "followUps": (3, 12)}
-REPORT_KEYS = {"version", "finished", "outcome", "plan",
+REPORT_LANGS = ("en", "zh")
+REPORT_KEYS = {"version", "finished", "outcome", "plan", "lang",
                *REPORT_TEXT, *REPORT_LISTS, *REPORT_TEXT_LISTS}
 # Agent-facing detail that belongs in the handoff, never in the report.
 REPORT_BANNED = (
@@ -268,6 +269,17 @@ def check_next_session(path, report):
             report.warn(path, 1, f'missing "{field}" field')
 
 
+# Chinese, Japanese, and Korean characters: two of them count as one word.
+CJK_RE = re.compile(r"[\u3040-\u30ff\u3400-\u4dbf\u4e00-\u9fff\uf900-\ufaff\uac00-\ud7af]")
+
+
+def word_count(text):
+    """Space-separated words with a letter or digit, plus CJK characters two to a word."""
+    cjk = len(CJK_RE.findall(text))
+    rest = CJK_RE.sub(" ", text)
+    return sum(1 for token in rest.split() if re.search(r"\w", token)) + (cjk + 1) // 2
+
+
 def json_strings(value):
     """Every string inside a parsed JSON value."""
     if isinstance(value, str):
@@ -319,12 +331,19 @@ def check_report(path, report):
                 report.error(path, line, f"{name} must be one of: {', '.join(spec)}")
         elif not (isinstance(value, str) and value.strip()):
             report.error(path, line, f"{name} must be non-empty text")
-        elif len(value.split()) > spec:
-            report.error(path, line, f"{name} is {len(value.split())} words (limit {spec}) "
+        elif word_count(value) > spec:
+            report.error(path, line, f"{name} is {word_count(value)} words (limit {spec}) "
                                      "— keep the detail in the log")
 
     if data.get("version") != 1:
         report.error(path, 1, "version must be 1")
+    if "lang" in data:
+        check_value("lang", data["lang"], REPORT_LANGS)
+    headline = data.get("headline") if isinstance(data.get("headline"), str) else ""
+    if CJK_RE.search(headline) and data.get("lang") != "zh":
+        report.warn(path, 1, 'headline is Chinese but "lang" is not "zh" — the page labels will be English')
+    elif data.get("lang") == "zh" and headline and not CJK_RE.search(headline):
+        report.warn(path, 1, '"lang" is "zh" but the headline is not Chinese')
     for key in sorted(set(data) - REPORT_KEYS):
         report.warn(path, 1, f'unknown field "{key}" — references/report.md lists the fields')
     singles = [*REPORT_TEXT.items(), ("finished", "date"), ("outcome", OUTCOMES)]

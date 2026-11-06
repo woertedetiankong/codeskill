@@ -24,7 +24,8 @@ These apply to every string in the file.
 - Say what is true for users now, not what Claude did. "Shoppers can pay without leaving the page", not "Implemented hosted payment fields".
 - Use only facts the dossier records. Do not invent numbers.
 - Dates are `YYYY-MM-DD`; the page formats them.
-- Stay inside the word limits below. A limit that feels tight means the sentence is carrying detail that belongs in the log.
+- Stay inside the word limits below. A limit that feels tight means the sentence is carrying detail that belongs in the log. In Chinese, every two characters count as one word.
+- Write the whole report in one language, the one the user works in, and set `lang` to match.
 
 | Instead of | Write |
 |---|---|
@@ -34,11 +35,12 @@ These apply to every string in the file.
 
 ## Fields
 
-Every top-level field is required except `plan`. Write `[]` for an empty list rather than leaving the field out, so a missing field always means a mistake.
+Every top-level field is required except `plan` and `lang`. Write `[]` for an empty list rather than leaving the field out, so a missing field always means a mistake.
 
 | Field | Shape | Limit | Comes from |
 |---|---|---|---|
 | `version` | `1` | | |
+| `lang` | `en` or `zh` | optional; `en` when absent | The language the report is written in; the page labels and dates follow it |
 | `project` | text | 4 words | Repo or product name |
 | `milestone` | text | 6 words | Task brief title |
 | `finished` | date | | Handoff `updated` |
