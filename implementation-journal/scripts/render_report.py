@@ -11,12 +11,17 @@ single line (in progress, or finished without a report). The overview reads
 only report.json, the task brief title, and the handoff status and date —
 never the text of the handoff or log.
 
+A report's optional "code" block is filled in from git: the renderer reads
+the listed commits for file and line counts and links them to GitHub when
+origin is a GitHub remote. Its optional "flow" block is drawn as an SVG.
+
 Usage:
-  render_report.py [PATH ...] [--open]
+  render_report.py [PATH ...] [--open] [--repo DIR]
 
 PATH may be a tasks directory (default: docs/tasks), a dossier directory, or
 a report.json file. --open opens the overview (or the single report, when
-there is no overview) in a browser. Run validate_journal.py first: this
+there is no overview) in a browser. --repo names the git repository for the
+code block when the report is not inside it. Run validate_journal.py first: this
 script draws what it is given and skips sections that are empty or missing.
 """
 
@@ -24,7 +29,10 @@ import argparse
 import html
 import json
 import re
+import subprocess
 import sys
+import unicodedata
+from urllib.parse import quote
 import webbrowser
 from pathlib import Path
 
@@ -70,6 +78,12 @@ LABELS = {
         "ix_goals": "{met} of {n} goals met", "ix_you_1": "1 choice by you",
         "ix_you_n": "{n} choices by you", "ix_risks": "{n} to keep in mind",
         "ix_empty": "When a milestone closes, its report shows up here.",
+        "flow": "How it fits together", "flow_new": "New", "flow_changed": "Changed",
+        "flow_same": "Already there", "code": "Where the code is", "code_sum": "{c} commits, {f} files",
+        "code_lines": "+{a} −{d} lines", "code_files": "{n} files", "code_files_new": "{n} files, {k} new",
+        "code_other": "Everything else", "code_commits": "Commits",
+        "code_note": "Line counts leave out lock files and generated files.",
+        "code_missing": "Not in the local repository",
     },
     "zh": {
         "html": "zh-CN", "sp": "", "brand": "开发日志", "theme": "切换深色或浅色",
@@ -99,6 +113,11 @@ LABELS = {
         "ix_goals": "目标达成 {met}/{n}", "ix_you_1": "你做了 1 个决定",
         "ix_you_n": "你做了 {n} 个决定", "ix_risks": "{n} 件事需要留意",
         "ix_empty": "里程碑结束后，报告会出现在这里。",
+        "flow": "现在怎么连起来", "flow_new": "新增", "flow_changed": "有改动", "flow_same": "原有",
+        "code": "代码在哪", "code_sum": "{c} 次提交，{f} 个文件", "code_lines": "+{a} −{d} 行",
+        "code_files": "{n} 个文件", "code_files_new": "{n} 个文件，{k} 个新增", "code_other": "其他",
+        "code_commits": "提交", "code_note": "行数不含锁文件和自动生成的文件。",
+        "code_missing": "本地仓库里找不到这个提交",
     },
 }
 
@@ -366,6 +385,60 @@ html[lang^="zh"] body{line-height:1.7}
 html[lang^="zh"] h1,html[lang^="zh"] h2,html[lang^="zh"] h3,html[lang^="zh"] .res-t b{letter-spacing:0}
 html[lang^="zh"] h1{line-height:1.2}
 
+/* How it fits together */
+.flow{padding:28px 28px 20px}
+.flow-scroll{overflow-x:auto}
+.flow-svg{display:block;margin:0 auto;max-width:100%;height:auto}
+.flow-v{display:none}
+.fl-node rect{stroke-width:1.5}
+.fl-new rect{fill:var(--blue-soft);stroke:var(--blue)}
+.fl-changed rect{fill:var(--surface);stroke:var(--blue)}
+.fl-same rect{fill:none;stroke:var(--hollow);stroke-dasharray:5 4}
+.fl-label{font:600 15px var(--body);fill:var(--ink)}
+.fl-new .fl-label{fill:var(--blue-ink)}
+.fl-same .fl-label{fill:var(--ink2)}
+.fl-note{font:12.5px var(--body);fill:var(--muted)}
+.fl-edge{fill:none;stroke:var(--muted);stroke-opacity:.45;stroke-width:2}
+.fl-head{fill:var(--muted);fill-opacity:.6}
+.fl-lbg{fill:var(--surface)}
+.fl-elabel{font:600 12px var(--body);fill:var(--muted)}
+.legend{display:flex;flex-wrap:wrap;justify-content:center;gap:8px 20px;margin-top:16px;font-size:13px;color:var(--muted)}
+.lg{display:inline-flex;align-items:center;gap:8px}
+.sw{width:18px;height:12px;border-radius:4px;border:1.5px solid var(--hollow)}
+.lg-new .sw{background:var(--blue-soft);border-color:var(--blue)}
+.lg-changed .sw{border-color:var(--blue)}
+.lg-same .sw{border-style:dashed}
+
+/* Where the code is */
+.code{padding:4px 28px}
+.areas .area{display:grid;grid-template-columns:minmax(0,1fr) 140px 116px 136px;gap:8px 20px;align-items:center;
+  padding:16px 0;border-top:1px solid var(--line)}
+.areas .area:first-child{border-top:0}
+.area-t{min-width:0}
+.area-w{font-weight:600}
+.paths{display:flex;flex-wrap:wrap;gap:6px;margin-top:8px}
+.path,.hash{font:12.5px/1.6 ui-monospace,SFMono-Regular,Menlo,Consolas,monospace;padding:0 8px;border-radius:6px;
+  text-decoration:none;overflow-wrap:anywhere}
+.path{background:var(--soft);color:var(--ink2)}
+a.path:hover{background:var(--blue-soft);color:var(--blue-ink)}
+a.path:focus-visible,a.hash:focus-visible{outline:2px solid var(--blue);outline-offset:2px}
+.bar2{display:flex;height:8px;border-radius:4px;background:var(--soft);overflow:hidden}
+.bar2 .a{background:var(--blue)}
+.bar2 .d{background:var(--hollow)}
+.lines{font:13px/1.4 ui-monospace,SFMono-Regular,Menlo,Consolas,monospace;text-align:right;white-space:nowrap}
+.lines .add{color:var(--blue-ink)}
+.lines .del{color:var(--muted)}
+.files{font-size:14px;color:var(--muted);text-align:right;white-space:nowrap}
+.commits{border-top:1px solid var(--line);padding:16px 0}
+.commits h3{font-family:var(--body);font-size:14px;font-weight:600;color:var(--muted);letter-spacing:0;margin-bottom:10px}
+.commits ul{display:flex;flex-direction:column;gap:8px}
+.cm{display:grid;grid-template-columns:auto minmax(0,1fr) auto;gap:12px;align-items:baseline;font-size:14px}
+.hash{background:var(--blue-soft);color:var(--blue-ink)}
+a.hash:hover{text-decoration:underline}
+.cm-s{color:var(--ink2);overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.cm-d{font-size:13px;color:var(--muted);white-space:nowrap}
+.code-note{font-size:13px;color:var(--muted);padding-bottom:16px}
+
 @media (max-width:960px){
   .hero{grid-template-columns:minmax(0,1fr);gap:28px}
   .result{max-width:520px}
@@ -405,6 +478,15 @@ html[lang^="zh"] h1{line-height:1.2}
   .ev-d{display:flex}
   .ev-body{padding-top:0}
   .facts{grid-template-columns:minmax(0,1fr)}
+  .flow{padding:20px 12px 16px}
+  .flow-h{display:none}
+  .flow-v{display:block}
+  .code{padding:4px 20px}
+  .areas .area{grid-template-columns:minmax(0,1fr) auto}
+  .area-t,.bar2{grid-column:1/-1}
+  .lines{text-align:left}
+  .cm{grid-template-columns:auto minmax(0,1fr)}
+  .cm-d{display:none}
   .fact{padding:20px}
   .fact+.fact{border-left:0;border-top:1px solid var(--line)}
 }
@@ -730,7 +812,8 @@ def story_row(data, t):
 
 def section_facts(data, t):
     blocks = []
-    touched = texts(data.get("touched"))
+    code = data.get("code") if isinstance(data.get("code"), dict) else {}
+    touched = [] if dicts(code.get("areas")) else texts(data.get("touched"))
     if touched:
         chips = "".join(f'<li class="chip">{esc(item)}</li>' for item in touched)
         blocks.append(f'<div class="fact"><h2>{t["touched"]}</h2><ul class="chips">{chips}</ul></div>')
@@ -746,6 +829,309 @@ def section_facts(data, t):
         return ""
     return (f'<section class="panel facts" aria-label="{t["details"]}" style="--cols:{len(blocks)}">'
             + "".join(blocks) + "</section>")
+
+
+# Flow diagram -----------------------------------------------------------------
+
+FLOW_STATES = ("new", "changed", "same")
+FLOW_LABEL_PX, FLOW_NOTE_PX, FLOW_EDGE_PX = 15, 12.5, 12
+FLOW_PAD_X, FLOW_ROW_GAP = 16, 18
+
+
+def text_px(text, size, bold=False):
+    """Rough rendered width; SVG text does not wrap, so boxes are sized from this."""
+    width = 0.0
+    for ch in str(text):
+        if unicodedata.east_asian_width(ch) in ("W", "F"):
+            width += size
+        elif ch == " ":
+            width += size * 0.3
+        elif ch.isupper() or ch.isdigit():
+            width += size * 0.64
+        else:
+            width += size * 0.54
+    return width * (1.06 if bold else 1.0)
+
+
+def flow_parts(flow):
+    nodes = [n for n in dicts(flow.get("nodes")) if isinstance(n.get("id"), str) and n.get("label")]
+    ids = {n["id"] for n in nodes}
+    edges = [e for e in dicts(flow.get("edges")) if e.get("from") in ids and e.get("to") in ids
+             and e.get("from") != e.get("to")]
+    return nodes, edges
+
+
+def flow_layers(nodes, edges):
+    """Longest-path layers; bounded so a cycle cannot loop forever."""
+    layer = {n["id"]: 0 for n in nodes}
+    for _ in range(len(nodes)):
+        moved = False
+        for e in edges:
+            want = layer[e["from"]] + 1
+            if layer[e["to"]] < want < len(nodes):
+                layer[e["to"]] = want
+                moved = True
+        if not moved:
+            break
+    columns = []
+    for n in nodes:
+        while len(columns) <= layer[n["id"]]:
+            columns.append([])
+        columns[layer[n["id"]]].append(n)
+    return [c for c in columns if c]
+
+
+def flow_svg(flow, t, vertical):
+    nodes, edges = flow_parts(flow)
+    columns = flow_layers(nodes, edges)
+    has_note = any(n.get("note") for n in nodes)
+    h = 62 if has_note else 44
+    size = {}
+    for n in nodes:
+        w = max(text_px(n["label"], FLOW_LABEL_PX, bold=True), text_px(n.get("note", ""), FLOW_NOTE_PX))
+        size[n["id"]] = max(112, round(w + 2 * FLOW_PAD_X))
+    label_w = max([text_px(e.get("label", ""), FLOW_EDGE_PX) for e in edges] + [0])
+    pos = {}
+    if not vertical:
+        gap = max(56, round(label_w + 56))
+        col_w = [max(size[n["id"]] for n in col) for col in columns]
+        col_h = [len(col) * h + (len(col) - 1) * FLOW_ROW_GAP for col in columns]
+        height = max(col_h)
+        x = 0
+        for ci, col in enumerate(columns):
+            y = (height - col_h[ci]) / 2
+            for n in col:
+                pos[n["id"]] = (x + (col_w[ci] - size[n["id"]]) / 2, y)
+                y += h + FLOW_ROW_GAP
+            x += col_w[ci] + gap
+        width = x - gap
+    else:
+        gap = 60
+        row_w = [sum(size[n["id"]] for n in row) + (len(row) - 1) * 14 for row in columns]
+        width = max(row_w + [0])
+        y = 0
+        for ri, row in enumerate(columns):
+            x = (width - row_w[ri]) / 2
+            for n in row:
+                pos[n["id"]] = (x, y)
+                x += size[n["id"]] + 14
+            y += h + gap
+        height = y - gap
+
+    pad = 8
+    marker = "fl-arrow-v" if vertical else "fl-arrow-h"
+    parts = [f'<svg class="flow-svg {"flow-v" if vertical else "flow-h"}" viewBox="{-pad} {-pad} '
+             f'{width + 2 * pad:.0f} {height + 2 * pad:.0f}" width="{width + 2 * pad:.0f}" '
+             f'role="img" aria-labelledby="flow-h">'
+             f'<defs><marker id="{marker}" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="5" '
+             f'markerHeight="5" orient="auto-start-reverse"><path class="fl-head" d="M0 0L10 5L0 10z"/></marker></defs>']
+    for e in edges:
+        (x1, y1), (x2, y2) = pos[e["from"]], pos[e["to"]]
+        w1, w2 = size[e["from"]], size[e["to"]]
+        if not vertical:
+            sx, sy, ex, ey = x1 + w1, y1 + h / 2, x2 - 2, y2 + h / 2
+            mid = (sx + ex) / 2
+            d = f"M{sx:.1f} {sy:.1f} C{mid:.1f} {sy:.1f} {mid:.1f} {ey:.1f} {ex:.1f} {ey:.1f}"
+        else:
+            sx, sy, ex, ey = x1 + w1 / 2, y1 + h, x2 + w2 / 2, y2 - 2
+            mid = (sy + ey) / 2
+            d = f"M{sx:.1f} {sy:.1f} C{sx:.1f} {mid:.1f} {ex:.1f} {mid:.1f} {ex:.1f} {ey:.1f}"
+        parts.append(f'<path class="fl-edge" d="{d}" marker-end="url(#{marker})"/>')
+        if e.get("label"):
+            lw = text_px(e["label"], FLOW_EDGE_PX) + 12
+            cx, cy = (sx + ex) / 2, (sy + ey) / 2
+            if vertical and abs(ex - sx) > 2:
+                # Beside the straight end of a bent edge, on its outer side.
+                side = -1 if ex < sx else 1
+                cx, cy = ex + side * (lw / 2 + 10), ey - 16
+            elif vertical:
+                cx += lw / 2 + 8
+            elif abs(ey - sy) > 2:
+                # Above (or below) the flat end of a bent edge, clear of the bend.
+                cx = ex - lw / 2 - 14
+                cy = ey - 14 if ey < sy else ey + 14
+            parts.append(f'<rect class="fl-lbg" x="{cx - lw / 2:.1f}" y="{cy - 10:.1f}" width="{lw:.1f}" height="20" rx="10"/>'
+                         f'<text class="fl-elabel" x="{cx:.1f}" y="{cy + 4:.1f}" text-anchor="middle">{esc(e["label"])}</text>')
+    for n in nodes:
+        x, y = pos[n["id"]]
+        state = n.get("state") if n.get("state") in FLOW_STATES else "same"
+        w = size[n["id"]]
+        label_y = y + (24 if n.get("note") else h / 2 + 5)
+        parts.append(f'<g class="fl-node fl-{state}"><rect x="{x:.1f}" y="{y:.1f}" width="{w}" height="{h}" rx="12"/>'
+                     f'<text class="fl-label" x="{x + w / 2:.1f}" y="{label_y:.1f}" text-anchor="middle">{esc(n["label"])}</text>')
+        if n.get("note"):
+            parts.append(f'<text class="fl-note" x="{x + w / 2:.1f}" y="{y + 45:.1f}" text-anchor="middle">{esc(n["note"])}</text>')
+        parts.append("</g>")
+    parts.append("</svg>")
+    return "".join(parts)
+
+
+def section_flow(flow, t):
+    if not isinstance(flow, dict):
+        return ""
+    nodes, _ = flow_parts(flow)
+    if len(nodes) < 2:
+        return ""
+    used = {n.get("state") if n.get("state") in FLOW_STATES else "same" for n in nodes}
+    legend = "".join(f'<li class="lg lg-{s}"><span class="sw"></span>{t["flow_" + s]}</li>'
+                     for s in FLOW_STATES if s in used)
+    desc = "；".join(f'{n["label"]}（{t["flow_" + (n.get("state") if n.get("state") in FLOW_STATES else "same")]}）'
+                    for n in nodes) if t["html"].startswith("zh") else "; ".join(
+        f'{n["label"]} ({t["flow_" + (n.get("state") if n.get("state") in FLOW_STATES else "same")].lower()})'
+        for n in nodes)
+    return (f'<section class="sec" aria-labelledby="flow-h"><h2 id="flow-h">{t["flow"]}</h2>'
+            f'<div class="panel flow"><div class="flow-scroll">{flow_svg(flow, t, False)}{flow_svg(flow, t, True)}</div>'
+            f'<p class="vh">{esc(desc)}</p><ul class="legend">{legend}</ul></div></section>')
+
+
+# Where the code is --------------------------------------------------------------
+
+GENERATED_RE = re.compile(r"(^|/)(pnpm-lock\.yaml|package-lock\.json|yarn\.lock|bun\.lockb?|Cargo\.lock"
+                          r"|poetry\.lock|uv\.lock|Gemfile\.lock|composer\.lock|go\.sum)$"
+                          r"|\.gen\.|_snapshot\.json$|\.min\.(js|css)$")
+
+
+def git(repo, *args):
+    try:
+        out = subprocess.run(["git", "-C", str(repo), *args], capture_output=True, text=True,
+                             timeout=20, encoding="utf-8", errors="replace")
+    except (OSError, subprocess.SubprocessError):
+        return None
+    return out.stdout if out.returncode == 0 else None
+
+
+def repo_root(start):
+    out = git(start, "rev-parse", "--show-toplevel")
+    return Path(out.strip()) if out and out.strip() else None
+
+
+def github_base(repo):
+    url = (git(repo, "remote", "get-url", "origin") or "").strip()
+    match = re.match(r"(?:https://github\.com/|git@github\.com:)([^/]+/[^/]+?)(?:\.git)?/?$", url)
+    return f"https://github.com/{match.group(1)}" if match else None
+
+
+def is_journal_file(path):
+    parts = path.split("/")
+    if any(DOSSIER_RE.match(p) for p in parts[:-1]):
+        return True
+    return len(parts) >= 2 and parts[-2] == "tasks" and parts[-1] in ("NEXT-SESSION.md", "INDEX.md", INDEX_NAME)
+
+
+def code_stats(repo, commits):
+    """Per-commit info and per-file totals across the listed commits."""
+    info, files = [], {}
+    for ref in commits:
+        meta = git(repo, "show", "-s", "--format=%H%x00%h%x00%ad%x00%s", "--date=short", ref)
+        if not meta or meta.count("\x00") < 3:
+            info.append({"ref": ref, "missing": True})
+            continue
+        full, short, date, subject = meta.strip("\n").split("\x00", 3)
+        info.append({"ref": ref, "full": full, "short": short, "date": date, "subject": subject})
+        for line in (git(repo, "show", "--no-renames", "--name-status", "--format=", full) or "").splitlines():
+            bits = line.split("\t")
+            if len(bits) < 2 or is_journal_file(bits[-1]):
+                continue
+            entry = files.setdefault(bits[-1], {"add": 0, "del": 0, "new": False})
+            if bits[0].startswith("A"):
+                entry["new"] = True
+        for line in (git(repo, "show", "--no-renames", "--numstat", "--format=", full) or "").splitlines():
+            bits = line.split("\t", 2)
+            if len(bits) < 3 or bits[0] == "-" or bits[2] not in files or GENERATED_RE.search(bits[2]):
+                continue
+            files[bits[2]]["add"] += int(bits[0])
+            files[bits[2]]["del"] += int(bits[1])
+    return info, files
+
+
+def area_of(path, areas):
+    best, best_len = None, -1
+    for i, area in enumerate(areas):
+        for p in texts(area.get("paths")):
+            p = p.strip("/")
+            if (path == p or path.startswith(p + "/")) and len(p) > best_len:
+                best, best_len = i, len(p)
+    return best
+
+
+def section_code(code, t, repo):
+    if not isinstance(code, dict):
+        return ""
+    areas = dicts(code.get("areas"))
+    commits = texts(code.get("commits"))
+    if not areas and not commits:
+        return ""
+    info, files = code_stats(repo, commits) if repo and commits else ([], {})
+    found = [c for c in info if not c.get("missing")]
+    base = github_base(repo) if repo else None
+    last = found[-1]["full"] if found else None
+
+    totals = [{"files": 0, "new": 0, "add": 0, "del": 0} for _ in areas]
+    other = {"files": 0, "new": 0, "add": 0, "del": 0}
+    for path, f in files.items():
+        i = area_of(path, areas)
+        bucket = totals[i] if i is not None else other
+        bucket["files"] += 1
+        bucket["new"] += f["new"]
+        bucket["add"] += f["add"]
+        bucket["del"] += f["del"]
+    rows = [(a.get("what", ""), texts(a.get("paths")), totals[i]) for i, a in enumerate(areas)]
+    if other["files"]:
+        rows.append((t["code_other"], [], other))
+    peak = max([r[2]["add"] + r[2]["del"] for r in rows] + [1])
+
+    def path_chip(p):
+        label = esc(p)
+        if base and last:
+            kind = (git(repo, "cat-file", "-t", f"{last}:{p.strip('/')}") or "").strip()
+            if kind in ("tree", "blob"):
+                href = f"{base}/{kind}/{last}/{quote(p.strip('/'), safe='/')}"
+                return f'<a class="path" href="{esc(href)}">{label}</a>'
+        return f'<span class="path">{label}</span>'
+
+    items = []
+    for what, paths, s in rows:
+        chips = "".join(path_chip(p) for p in paths)
+        chips = f'<div class="paths">{chips}</div>' if chips else ""
+        stats = ""
+        if files:
+            a_w = 100 * s["add"] / peak
+            d_w = 100 * s["del"] / peak
+            count = (t["code_files_new"].format(n=s["files"], k=s["new"]) if s["new"]
+                     else t["code_files"].format(n=s["files"]))
+            stats = (f'<span class="bar2" aria-hidden="true"><span class="a" style="width:{a_w:.1f}%"></span>'
+                     f'<span class="d" style="width:{d_w:.1f}%"></span></span>'
+                     f'<span class="lines"><span class="add">+{s["add"]:,}</span> <span class="del">−{s["del"]:,}</span></span>'
+                     f'<span class="files">{count}</span>')
+        items.append(f'<li class="area"><div class="area-t"><span class="area-w">{esc(what)}</span>{chips}</div>{stats}</li>')
+
+    commit_rows = []
+    for c in info:
+        if c.get("missing"):
+            commit_rows.append(f'<li class="cm"><span class="hash">{esc(c["ref"])}</span>'
+                               f'<span class="cm-s">{t["code_missing"]}</span><span></span></li>')
+            continue
+        hash_html = esc(c["short"])
+        if base:
+            hash_html = f'<a class="hash" href="{esc(base)}/commit/{c["full"]}">{hash_html}</a>'
+        else:
+            hash_html = f'<span class="hash">{hash_html}</span>'
+        commit_rows.append(f'<li class="cm">{hash_html}<span class="cm-s">{esc(c["subject"])}</span>'
+                           f'<span class="cm-d">{fmt_date(c["date"], t)}</span></li>')
+    commits_html = ""
+    if commit_rows:
+        commits_html = (f'<div class="commits"><h3>{t["code_commits"]}</h3><ul>' + "".join(commit_rows) + "</ul></div>")
+
+    summary = ""
+    if files:
+        add = sum(f["add"] for f in files.values())
+        rem = sum(f["del"] for f in files.values())
+        summary = (f'<span class="count">{t["code_sum"].format(c=len(found), f=len(files))}，'
+                   if t["html"].startswith("zh") else f'<span class="count">{t["code_sum"].format(c=len(found), f=len(files))}, ')
+        summary += f'{t["code_lines"].format(a=f"{add:,}", d=f"{rem:,}")}</span>'
+    note = f'<p class="code-note">{t["code_note"]}</p>' if files else ""
+    return (f'<section class="sec" aria-labelledby="code-h"><div class="sec-h"><h2 id="code-h">{t["code"]}</h2>{summary}</div>'
+            f'<div class="panel code"><ul class="areas">' + "".join(items) + f'</ul>{commits_html}{note}</div></section>')
 
 
 def page(title, project, body, t, css=CSS, nav=""):
@@ -771,15 +1157,17 @@ def page(title, project, body, t, css=CSS, nav=""):
     return out
 
 
-def render(data, index_href=None):
+def render(data, index_href=None, repo=None):
     t = labels(data.get("lang"))
     body = [
         hero(data, t),
         section_plan(data.get("plan"), t),
         section_changes(data.get("changes"), t),
+        section_flow(data.get("flow"), t),
         section_risks(data.get("risks"), t),
         section_decisions(data.get("decisions"), t),
         story_row(data, t),
+        section_code(data.get("code"), t, repo),
         section_facts(data, t),
     ]
     if data.get("finished"):
@@ -1007,6 +1395,7 @@ def open_page(path):
 def main():
     parser = argparse.ArgumentParser(description=__doc__.splitlines()[0])
     parser.add_argument("paths", nargs="*", help="tasks dir, dossier dirs, or report.json files")
+    parser.add_argument("--repo", help="git repository for the code section (default: the report's own)")
     parser.add_argument("--open", action="store_true",
                         help="open the overview page (or the report) in a browser")
     args = parser.parse_args()
@@ -1031,7 +1420,8 @@ def main():
             continue
         in_dossier = DOSSIER_RE.match(path.resolve().parent.name)
         out = path.with_name("report.html")
-        out.write_text(render(data, f"../{INDEX_NAME}" if in_dossier else None), encoding="utf-8")
+        repo = Path(args.repo) if args.repo else repo_root(path.resolve().parent)
+        out.write_text(render(data, f"../{INDEX_NAME}" if in_dossier else None, repo), encoding="utf-8")
         written.append(out)
         print(f"wrote {out}")
     indexes = []

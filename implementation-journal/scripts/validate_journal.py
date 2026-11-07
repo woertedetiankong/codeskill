@@ -32,6 +32,7 @@ conventions can pass explicit paths; unknown layouts degrade to warnings.
 import argparse
 import json
 import re
+import subprocess
 import sys
 from pathlib import Path
 
@@ -83,8 +84,13 @@ REPORT_LISTS = {
 # field: (max items, words per item)
 REPORT_TEXT_LISTS = {"touched": (6, 4), "docsUpdated": (6, 4), "followUps": (3, 12)}
 REPORT_LANGS = ("en", "zh")
-REPORT_KEYS = {"version", "finished", "outcome", "plan", "lang",
+REPORT_KEYS = {"version", "finished", "outcome", "plan", "lang", "flow", "code",
                *REPORT_TEXT, *REPORT_LISTS, *REPORT_TEXT_LISTS}
+# Optional "flow" diagram and "code" block (references/report.md).
+FLOW_STATES = ("new", "changed", "same")
+FLOW_LIMITS = {"nodes": (2, 6), "edges": (1, 8)}
+CODE_LIMITS = {"commits": 20, "areas": 8, "paths": 6}
+COMMIT_REF_RE = re.compile(r"[0-9a-f]{7,40}")
 # Agent-facing detail that belongs in the handoff, never in the report.
 REPORT_BANNED = (
     (re.compile(r"\b(?=[0-9a-f]*\d)(?=[0-9a-f]*[a-f])[0-9a-f]{7,40}\b"), "a commit hash"),
@@ -292,6 +298,93 @@ def json_strings(value):
             yield from json_strings(item)
 
 
+def check_flow(path, report, flow, check_value):
+    nodes = flow.get("nodes") if isinstance(flow, dict) else None
+    edges = flow.get("edges") if isinstance(flow, dict) else None
+    if not isinstance(nodes, list) or not isinstance(edges, list):
+        report.error(path, 1, "flow must be {nodes, edges}, or be left out")
+        return
+    low, high = FLOW_LIMITS["nodes"]
+    if not low <= len(nodes) <= high:
+        report.error(path, 1, f"flow has {len(nodes)} nodes (allowed {low}-{high}) — draw only the parts that changed and their neighbours")
+    ids = set()
+    for i, node in enumerate(nodes):
+        if not isinstance(node, dict):
+            report.error(path, 1, f"flow.nodes[{i}] must be an object")
+            continue
+        node_id = node.get("id")
+        if not (isinstance(node_id, str) and node_id.strip()):
+            report.error(path, 1, f"flow.nodes[{i}].id must be non-empty text")
+        elif node_id in ids:
+            report.error(path, 1, f'flow.nodes[{i}].id "{node_id}" is used twice')
+        else:
+            ids.add(node_id)
+        check_value(f"flow.nodes[{i}].label", node.get("label"), 6)
+        if "note" in node:
+            check_value(f"flow.nodes[{i}].note", node["note"], 8)
+        check_value(f"flow.nodes[{i}].state", node.get("state"), FLOW_STATES)
+    low, high = FLOW_LIMITS["edges"]
+    if not low <= len(edges) <= high:
+        report.error(path, 1, f"flow has {len(edges)} edges (allowed {low}-{high})")
+    for i, edge in enumerate(edges):
+        if not isinstance(edge, dict):
+            report.error(path, 1, f"flow.edges[{i}] must be an object")
+            continue
+        for end in ("from", "to"):
+            if edge.get(end) not in ids:
+                report.error(path, 1, f'flow.edges[{i}].{end} must name a node id')
+        if edge.get("from") == edge.get("to"):
+            report.error(path, 1, f"flow.edges[{i}] points at its own node")
+        if "label" in edge:
+            check_value(f"flow.edges[{i}].label", edge["label"], 4)
+
+
+def git_commit_exists(repo, ref):
+    try:
+        out = subprocess.run(["git", "-C", str(repo), "rev-parse", "--verify", "--quiet", f"{ref}^{{commit}}"],
+                             capture_output=True, text=True, timeout=10)
+    except (OSError, subprocess.SubprocessError):
+        return None
+    return out.returncode == 0
+
+
+def check_code(path, report, code, check_value):
+    commits = code.get("commits") if isinstance(code, dict) else None
+    areas = code.get("areas") if isinstance(code, dict) else None
+    if not isinstance(commits, list) or not isinstance(areas, list):
+        report.error(path, 1, "code must be {commits, areas}, or be left out")
+        return
+    if not commits and not areas:
+        report.error(path, 1, "code has no commits and no areas — leave it out instead")
+    if len(commits) > CODE_LIMITS["commits"]:
+        report.error(path, 1, f'code.commits has {len(commits)} items (allowed 0-{CODE_LIMITS["commits"]})')
+    try:
+        inside = subprocess.run(["git", "-C", str(path.parent), "rev-parse", "--is-inside-work-tree"],
+                                capture_output=True, text=True, timeout=10).returncode == 0
+    except (OSError, subprocess.SubprocessError):
+        inside = False
+    for i, ref in enumerate(commits):
+        if not (isinstance(ref, str) and COMMIT_REF_RE.fullmatch(ref)):
+            report.error(path, 1, f"code.commits[{i}] must be a commit hash (7-40 hex characters)")
+        elif inside and git_commit_exists(path.parent, ref) is False:
+            report.warn(path, 1, f"code.commits[{i}] {ref} is not in this repository — the page will show it without numbers")
+    if len(areas) > CODE_LIMITS["areas"]:
+        report.error(path, 1, f'code.areas has {len(areas)} items (allowed 0-{CODE_LIMITS["areas"]})')
+    for i, area in enumerate(areas):
+        if not isinstance(area, dict):
+            report.error(path, 1, f"code.areas[{i}] must be an object")
+            continue
+        check_value(f"code.areas[{i}].what", area.get("what"), 8)
+        paths = area.get("paths")
+        if not isinstance(paths, list) or not 1 <= len(paths) <= CODE_LIMITS["paths"]:
+            report.error(path, 1, f'code.areas[{i}].paths must list 1-{CODE_LIMITS["paths"]} repo paths')
+            continue
+        for j, item in enumerate(paths):
+            if not (isinstance(item, str) and item.strip()) or item.startswith("/") or ".." in item.split("/") \
+                    or re.match(r"https?://", item):
+                report.error(path, 1, f"code.areas[{i}].paths[{j}] must be a path relative to the repo root")
+
+
 def check_report(path, report):
     text = path.read_text(encoding="utf-8", errors="replace")
     try:
@@ -403,7 +496,14 @@ def check_report(path, report):
             if marked != 1:
                 report.error(path, 1, f"plan.steps must mark exactly one thisMilestone (found {marked})")
 
-    for value in json_strings(data):
+    if "flow" in data:
+        check_flow(path, report, data["flow"], check_value)
+    if "code" in data:
+        check_code(path, report, data["code"], check_value)
+
+    # The code block is the one place for paths and commits; everything else is prose.
+    prose = {key: value for key, value in data.items() if key != "code"}
+    for value in json_strings(prose):
         for pattern, what in REPORT_BANNED:
             if pattern.search(value):
                 report.error(path, line_of(value),

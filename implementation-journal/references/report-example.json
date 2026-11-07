@@ -39,6 +39,19 @@
   "touched": ["Checkout page", "Payments"],
   "docsUpdated": ["README", "Payment guide"],
   "followUps": ["Order emails is the next step in the plan."],
+  "flow": {
+    "nodes": [
+      { "id": "shopper", "label": "Shopper's browser", "note": "Checkout page", "state": "same" },
+      { "id": "box", "label": "Secure card box", "note": "Run by the payment company", "state": "new" },
+      { "id": "server", "label": "Our checkout server", "note": "Sees only a one-time code", "state": "changed" },
+      { "id": "payco", "label": "Payment company", "note": "Charges the card", "state": "same" }
+    ],
+    "edges": [
+      { "from": "shopper", "to": "box", "label": "Types card" },
+      { "from": "box", "to": "server", "label": "One-time code" },
+      { "from": "server", "to": "payco", "label": "Charge" }
+    ]
+  },
   "plan": {
     "name": "Checkout redesign",
     "steps": [
